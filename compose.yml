@@ -1,0 +1,21 @@
+services:
+  ros2:
+    image: ros2-pi:jazzy-desktop
+    container_name: ros2
+    network_mode: host
+    privileged: true
+    restart: unless-stopped
+
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${HOME}/ros2_ws:/home/ros/ros2_ws
+      - /dev:/dev
+
+    devices:
+      - /dev/dri:/dev/dri
+
+    stdin_open: true
+    tty: true

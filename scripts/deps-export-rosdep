@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "# rosdep keys (huskeliste) du har logget utenfor Dockerfile:"
+comm -13 /opt/baseline_rosdep_keys.txt <(sort -u "${HOME}/.deps/rosdep_keys.log") | sed 's/^/- /'
