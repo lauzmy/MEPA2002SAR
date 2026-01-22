@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APT_BASE="/opt/baseline_apt_manual.txt"
+PIP_BASE="/opt/baseline_pip_user.txt"
+ROSDEP_BASE="/opt/baseline_rosdep_keys.txt"
+ROSDEP_LOG="${HOME}/.deps/rosdep_keys.log"
+
+mkdir -p "${HOME}/.deps"
+touch "$ROSDEP_LOG"
+
+apt_new=0
+pip_new=0
+rosdep_new=0
+
+if [[ -f "$APT_BASE" ]]; then
+  apt_new=$(comm -13 "$APT_BASE" <(apt-mark showmanual | sort) | wc -l | tr -d ' ')
+fi
+
+if [[ -f "$PIP_BASE" ]]; then
+  pip_new=$(comm -13 "$PIP_BASE" <(python3 -m pip list --user --format=freeze | sort) | wc -l | tr -d ' ')
+fi
+
+if [[ -f "$ROSDEP_BASE" ]]; then
+  rosdep_new=$(comm -13 "$ROSDEP_BASE" <(sort -u "$ROSDEP_LOG") | wc -l | tr -d ' ')
+fi
+
+total=$((apt_new + pip_new + rosdep_new))
+if (( total > 0 )); then
+  echo
+  echo "WARN: Dependencies present in the container but not declared in the Dockerfile:"
+  (( apt_new > 0 )) && echo "  - apt:    $apt_new"
+  (( pip_new > 0 )) && echo "  - pip:    $pip_new (user installs only)"
+  (( rosdep_new > 0 )) && echo "  - rosdep: $rosdep_new keys (note: rosdep installs via apt/pip)"
+  echo
+  echo "Commands:"
+  echo "  deps-list-apt | deps-export-apt"
+  echo "  deps-list-pip | deps-export-pip"
+  echo "  deps-list-rosdep | deps-export-rosdep"
+  echo
+fi

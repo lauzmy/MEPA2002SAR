@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+comm -13 /opt/baseline_rosdep_keys.txt <(sort -u "${HOME}/.deps/rosdep_keys.log")

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p "${HOME}/.deps"
+touch "${HOME}/.deps/rosdep_keys.log"
+
+SIM_OUT=$(rosdep install "$@" --simulate 2>/dev/null || true)
+echo "$SIM_OUT" \
+  | grep -Eo 'rosdep key: [A-Za-z0-9_.-]+' \
+  | awk '{print $3}' >> "${HOME}/.deps/rosdep_keys.log" || true
+
+exec rosdep install "$@"
