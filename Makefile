@@ -37,3 +37,7 @@ recreate:
 # Run once per local desktop session if you want GUI apps from the container
 x11:
 	xhost +local:docker >/dev/null 2>&1 || true
+
+ros_build:
+	colcon build --cmake-args -DBUILD_TESTING=ON
+	source install/setup.sh
