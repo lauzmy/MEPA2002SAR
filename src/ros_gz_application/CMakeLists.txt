@@ -5,7 +5,7 @@ project(ros_gz_application)
 find_package(ament_cmake REQUIRED)
 
 install(PROGRAMS
-	scripts/cmd_vel_publisher.py
+	launch/cmd_vel_publisher.py
 	DESTINATION lib/${PROJECT_NAME}
 )
 
