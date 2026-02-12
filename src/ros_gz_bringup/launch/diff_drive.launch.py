@@ -82,11 +82,31 @@ def generate_launch_description():
         output='screen'
     )
 
+    # Simple cmd_vel publisher
+    cmd_vel_publisher = Node(
+        package='ros_gz_application',
+        executable='cmd_vel_publisher.py',
+        name='cmd_vel_publisher',
+        output='screen',
+        parameters=[{
+            'linear_x': LaunchConfiguration('linear_x'),
+            'angular_z': LaunchConfiguration('angular_z'),
+            'publish_hz': LaunchConfiguration('publish_hz'),
+        }]
+    )
+
     return LaunchDescription([
         gz_sim,
         DeclareLaunchArgument('rviz', default_value='true',
                               description='Open RViz.'),
+        DeclareLaunchArgument('linear_x', default_value='0.5',
+                              description='Linear x velocity for cmd_vel publisher.'),
+        DeclareLaunchArgument('angular_z', default_value='0.0',
+                              description='Angular z velocity for cmd_vel publisher.'),
+        DeclareLaunchArgument('publish_hz', default_value='10.0',
+                              description='Publish rate (Hz) for cmd_vel publisher.'),
         bridge,
         robot_state_publisher,
+        cmd_vel_publisher,
         rviz
     ])
