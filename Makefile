@@ -1,18 +1,15 @@
 SHELL := /bin/bash
 
 IMAGE := ros2-pi:jazzy-desktop
-
-# Desktop is OFF by default. Enable with: make build DESKTOP=1
-DESKTOP ?= 0
-
 UID := $(shell id -u)
 GID := $(shell id -g)
+
+.PHONY: build up down shell logs restart recreate x11 ros_build ros_clean
 
 build:
 	docker build -t $(IMAGE) \
 	  --build-arg USER_UID=$(UID) \
 	  --build-arg USER_GID=$(GID) \
-	  --build-arg INSTALL_DESKTOP=$(DESKTOP) \
 	  .
 
 up:
@@ -22,7 +19,7 @@ down:
 	docker compose down
 
 shell:
-	docker compose exec ros2 bash
+	docker compose exec -u ubuntu ros2 bash
 
 logs:
 	docker compose logs -f --tail=200 ros2
@@ -34,10 +31,12 @@ recreate:
 	docker compose down
 	docker compose up -d
 
-# Run once per local desktop session if you want GUI apps from the container
+# Run once per local desktop session to allow GUI apps from the container.
 x11:
 	xhost +local:docker >/dev/null 2>&1 || true
 
 ros_build:
-	colcon build --cmake-args -DBUILD_TESTING=ON
-	source install/setup.sh
+	colcon build --cmake-clean-cache --cmake-args -DBUILD_TESTING=ON
+
+ros_clean:
+	rm -rf build install log

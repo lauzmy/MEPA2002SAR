@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-comm -13 /opt/baseline_pip_user.txt <(python3 -m pip list --user --format=freeze | sort)

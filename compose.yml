@@ -11,7 +11,7 @@ services:
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${HOME}/ros2_ws:/home/ros/ros2_ws
+      - ${HOME}/ros2_ws:/home/ubuntu/ros2_ws
       - /dev:/dev
 
     devices:
