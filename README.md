@@ -17,8 +17,8 @@ A ROS 2 + Gazebo Sim workspace that launches simulation, bridges ROS↔Gazebo t
 
 **Optional GUI tools (RViz/RQt):**
 - `make build DESKTOP=1`
-- `make recreate`
 - `make x11`
+- `make recreate`
 
 ## Documentation
 - [Architecture](Architecture.md)

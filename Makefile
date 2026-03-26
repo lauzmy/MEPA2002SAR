@@ -33,7 +33,16 @@ recreate:
 
 # Run once per local desktop session to allow GUI apps from the container.
 x11:
-	xhost +local:docker >/dev/null 2>&1 || true
+	@if ! command -v xauth >/dev/null 2>&1; then \
+	  echo "xauth is required for GUI forwarding (install package: xauth)"; \
+	  exit 1; \
+	fi
+	@touch $$HOME/.docker.xauth
+	@xauth nlist $${DISPLAY:-:0} | sed -e 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge - >/dev/null 2>&1 || true
+	@chmod 600 $$HOME/.docker.xauth
+	@xhost +SI:localuser:$$(id -un) >/dev/null 2>&1 || true
+	@xhost +SI:localuser:root >/dev/null 2>&1 || true
+	@echo "X11 access configured for Docker GUI apps."
 
 ros_build:
 	colcon build --cmake-clean-cache --cmake-args -DBUILD_TESTING=ON
