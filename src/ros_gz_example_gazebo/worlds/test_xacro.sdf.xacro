@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<sdf version="1.8" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Parametere -->
+  <xacro:property name="arena_size" value="10.0"/>
+  <xacro:property name="wall_t" value="0.2"/>
+  <xacro:property name="wall_h" value="1.0"/>
+
+  <xacro:macro name="wall" params="name x y yaw sx sy sz">
+    <model name="${name}">
+      <static>true</static>
+      <pose>${x} ${y} ${sz/2.0} 0 0 ${yaw}</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+          <material>
+            <ambient>0.96 0.87 0.70 1</ambient>
+            <diffuse>0.96 0.87 0.70 1</diffuse>
+            <specular>0.20 0.20 0.20 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <xacro:macro name="obs_box" params="name x y z yaw sx sy sz">
+    <model name="${name}">
+      <static>true</static>
+      <pose>${x} ${y} ${z} 0 0 ${yaw}</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <xacro:macro name="obs_cyl" params="name x y z r l">
+    <model name="${name}">
+      <static>true</static>
+      <pose>${x} ${y} ${z} 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>${r}</radius><length>${l}</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>${r}</radius><length>${l}</length></cylinder></geometry>
+        </visual>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <xacro:macro name="thermal_box" params="name x y z yaw sx sy sz temp_k r g b">
+    <model name="${name}">
+      <static>true</static>
+      <pose>${x} ${y} ${z} 0 0 ${yaw}</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>${sx} ${sy} ${sz}</size></box></geometry>
+          <material>
+            <ambient>${r} ${g} ${b} 1</ambient>
+            <diffuse>${r} ${g} ${b} 1</diffuse>
+          </material>
+          <temperature>${temp_k}</temperature>
+        </visual>
+      </link>
+    </model>
+  </xacro:macro>
+
+  <world name="test_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"/>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Yttervegger -->
+    <xacro:wall name="wall_north" x="0" y="${arena_size/2.0}" yaw="0" sx="${arena_size}" sy="${wall_t}" sz="${wall_h}"/>
+    <xacro:wall name="wall_south" x="0" y="${-arena_size/2.0}" yaw="0" sx="${arena_size}" sy="${wall_t}" sz="${wall_h}"/>
+    <xacro:wall name="wall_east"  x="${arena_size/2.0}" y="0" yaw="0" sx="${wall_t}" sy="${arena_size}" sz="${wall_h}"/>
+    <xacro:wall name="wall_west"  x="${-arena_size/2.0}" y="0" yaw="0" sx="${wall_t}" sy="${arena_size}" sz="${wall_h}"/>
+
+    <!-- Interne vegger / rom -->
+    <!-- Vertikal vegg ved x = -1.5, med døråpning rundt y = 0 -->
+    <xacro:wall name="room_v_left_top" x="-1.5" y="2.0"  yaw="0" sx="${wall_t}" sy="3.0" sz="${wall_h}"/>
+    <xacro:wall name="room_v_left_bot" x="-1.5" y="-2.0" yaw="0" sx="${wall_t}" sy="3.0" sz="${wall_h}"/>
+
+    <!-- Vertikal vegg ved x = 1.8, med døråpning rundt y = -1 -->
+    <xacro:wall name="room_v_right_top" x="1.8" y="2.3"  yaw="0" sx="${wall_t}" sy="2.4" sz="${wall_h}"/>
+    <xacro:wall name="room_v_right_bot" x="1.8" y="-2.6" yaw="0" sx="${wall_t}" sy="2.8" sz="${wall_h}"/>
+
+    <!-- Hindringer -->
+    <!--
+    <xacro:obs_box name="obs_box_1" x="1.5" y="0.8"  z="0.35" yaw="0.4"  sx="1.0" sy="0.6" sz="0.7"/>
+    <xacro:obs_box name="obs_box_2" x="-1.8" y="-1.2" z="0.4"  yaw="-0.2" sx="0.8" sy="1.2" sz="0.8"/>
+    <xacro:obs_cyl name="obs_cyl_1" x="0.0" y="2.0" z="0.5" r="0.35" l="1.0"/>
+    -->
+
+    <!-- Varme kilder -->
+    <xacro:thermal_box name="hot_target_1"  x="3.0"  y="1.0"  z="0.4" yaw="0"   sx="0.5" sy="0.5" sz="0.8" temp_k="360.0" r="1.0" g="0.2" b="0.2"/>
+    <xacro:thermal_box name="cold_target_1" x="-2.2" y="-1.4" z="0.4" yaw="0.3" sx="0.6" sy="0.4" sz="0.8" temp_k="285.0" r="0.2" g="0.4" b="1.0"/>
+
+    <include>
+      <uri>model://xacro_test</uri>
+      <name>test_robot</name>
+      <pose>0 0 0.15 0 0 0</pose>
+    </include>
+  </world>
+</sdf>

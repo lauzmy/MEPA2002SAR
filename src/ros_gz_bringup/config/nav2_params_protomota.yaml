@@ -1,0 +1,358 @@
+# Nav2 Parameters for Project Ogre Mecanum Drive Robot
+# Configured for omnidirectional movement with RPLIDAR + RealSense obstacle avoidance
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: True
+    global_frame: map
+    robot_base_frame: base_footprint
+    odom_topic: /test_robot/odometry
+    bt_loop_duration: 10
+    default_server_timeout: 20
+
+    # Behavior tree XML (use default Nav2 behavior trees with absolute paths)
+    default_nav_to_pose_bt_xml: "/opt/ros/jazzy/share/nav2_bt_navigator/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml"
+    default_nav_through_poses_bt_xml: "/opt/ros/jazzy/share/nav2_bt_navigator/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml"
+
+controller_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 10.0  # Reduced from 20Hz to reduce CPU load
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugins: ["general_goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    # Progress checker parameters
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+
+    # Goal checker parameters
+    general_goal_checker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.15  # 15cm position tolerance
+      yaw_goal_tolerance: 0.15  # ~9 degrees rotation tolerance
+
+    # DWB parameters for mecanum drive
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: True
+      min_vel_x: -0.5
+      min_vel_y: -0.5   # Mecanum can strafe
+      max_vel_x: 0.5
+      max_vel_y: 0.5
+      max_vel_theta: 2.0
+      min_speed_xy: 0.0
+      max_speed_xy: 0.5
+      min_speed_theta: 0.0
+
+      # Acceleration limits
+      acc_lim_x: 1.5
+      acc_lim_y: 1.5
+      acc_lim_theta: 3.0
+      decel_lim_x: -1.5
+      decel_lim_y: -1.5
+      decel_lim_theta: -3.0
+
+      # Path/goal tolerances
+      vx_samples: 20
+      vy_samples: 10  # Mecanum can strafe
+      vtheta_samples: 20
+      # sim_time: How far ahead (seconds) to simulate trajectories
+      # Balance: too short = cuts corners, too long = gets stuck on distant obstacles
+      sim_time: 1.2
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      transform_tolerance: 0.5
+      xy_goal_tolerance: 0.15
+      trans_stopped_velocity: 0.1
+      short_circuit_trajectory_evaluation: True
+      stateful: True
+
+      # Trajectory critics (scoring functions)
+      # Higher scale = more weight on that criterion
+      critics: ["RotateToGoal", "Oscillation", "ObstacleFootprint", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      # ObstacleFootprint: Better than BaseObstacle - checks full robot footprint
+      # Scale must be HIGH to reject trajectories near obstacles
+      ObstacleFootprint.scale: 32.0
+      ObstacleFootprint.sum_scores: false
+      # PathAlign: Align robot heading with path direction
+      PathAlign.scale: 24.0
+      PathAlign.forward_point_distance: 0.5
+      # GoalAlign: Align heading toward goal
+      GoalAlign.scale: 20.0
+      GoalAlign.forward_point_distance: 0.5
+      # PathDist: Stay close to the global path
+      PathDist.scale: 24.0
+      # GoalDist: Move toward goal
+      GoalDist.scale: 20.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 3.0   # Reduced from 5.0 to lower CPU load
+      publish_frequency: 1.0  # Reduced from 2.0
+      global_frame: odom
+      robot_base_frame: base_footprint
+      use_sim_time: True
+      rolling_window: true
+      width: 3
+      height: 3
+      resolution: 0.05
+      # Robot footprint: 220mm x 180mm = 0.22m x 0.18m
+      # Use circumscribed radius: sqrt((0.11)^2 + (0.09)^2) = 0.142m, round up to 0.15m
+      robot_radius: 0.15
+      plugins: ["voxel_layer", "inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # cost_scaling_factor: How quickly cost drops off from obstacles
+        # Lower = costs stay high further from obstacles = more cautious
+        cost_scaling_factor: 3.0
+        # inflation_radius: How far from obstacles to inflate costs
+        # robot_radius (0.15) + clearance (0.35) = 0.50m
+        inflation_radius: 0.50
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: True
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: /test_robot/scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 12.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 11.5
+          obstacle_min_range: 0.0
+      static_layer:
+        map_subscribe_transient_local: True
+      always_send_full_costmap: True
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_footprint
+      use_sim_time: True
+      robot_radius: 0.20
+      resolution: 0.05
+      track_unknown_space: true
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan pointcloud
+        scan:
+          topic: /test_robot/scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 12.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 11.5
+          obstacle_min_range: 0.0
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # cost_scaling_factor: How quickly cost drops off from obstacles
+        # Lower = costs stay high further from obstacles = more cautious
+        cost_scaling_factor: 3.0
+        # inflation_radius: How far from obstacles to inflate costs
+        # robot_radius (0.15) + clearance (0.35) = 0.50m
+        inflation_radius: 0.50
+      always_send_full_costmap: True
+
+map_server:
+  ros__parameters:
+    use_sim_time: True
+    yaml_filename: ""  # Set via launch file argument
+
+map_saver:
+  ros__parameters:
+    use_sim_time: True
+    save_map_timeout: 5.0
+    free_thresh_default: 0.25
+    occupied_thresh_default: 0.65
+    map_subscribe_transient_local: True
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 20.0
+    use_sim_time: True
+    planner_plugins: ["GridBased"]
+    GridBased:
+      # Using Smac 2D planner instead of NavFn - better handling of tight spaces
+      # and doesn't have the "legal potential but no path" bug
+      plugin: "nav2_smac_planner::SmacPlanner2D"
+      tolerance: 0.50           # Accept goals within 50cm of requested point
+      allow_unknown: true
+      max_iterations: 1000000   # Maximum A* iterations
+      max_on_approach_iterations: 1000
+      max_planning_time: 2.0    # seconds
+      cost_travel_multiplier: 2.0  # Prefer lower-cost paths
+      use_final_approach_orientation: false
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.3
+        w_data: 0.2
+        tolerance: 1.0e-10
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: True
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: True
+
+behavior_server:
+  ros__parameters:
+    costmap_topic: local_costmap/costmap_raw
+    footprint_topic: local_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    global_frame: odom
+    robot_base_frame: base_footprint
+    transform_tolerance: 0.1
+    use_sim_time: True
+
+robot_state_publisher:
+  ros__parameters:
+    use_sim_time: True
+
+waypoint_follower:
+  ros__parameters:
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: True
+    smoothing_frequency: 20.0
+    scale_velocities: False
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.5, 0.5, 2.0]  # [vx, vy, vtheta] in m/s
+    min_velocity: [-0.5, -0.5, -2.0]
+    max_accel: [1.5, 1.5, 3.0]
+    max_decel: [-1.5, -1.5, -3.0]
+    odom_topic: "/test_robot/odometry"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: True
+    base_frame_id: "base_footprint"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "/test_robot/cmd_vel"
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    stop_pub_timeout: 2.0
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "/test_robot/scan"
+      enabled: True
+    polygons: ["stop_polygon"]
+    stop_polygon:
+      type: "polygon"
+      points: "[[0.35, 0.25], [0.35, -0.25], [-0.35, -0.25], [-0.35, 0.25]]"
+      action_type: "stop"
+      visualize: True
+      polygon_pub_topic: "polygon_stop"
+
+docking_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 50.0
+    initial_perception_timeout: 5.0
+    wait_charge_timeout: 5.0
+    dock_approach_timeout: 30.0
+    undock_linear_tolerance: 0.05
+    undock_angular_tolerance: 0.1
+    max_retries: 3
+    base_frame: "base_footprint"
+    dock_plugins: ['simple_dock']
+    simple_dock:
+      plugin: 'opennav_docking::SimpleChargingDock'
+      docking_threshold: 0.05
+      staging_x_offset: -0.7
+      use_external_detection_pose: true
+      use_battery_status: false
+
+docking_server_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+collision_monitor_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+behavior_server_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+planner_server_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+controller_server_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+bt_navigator_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+smoother_server_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+local_costmap_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+global_costmap_rclcpp_node:
+  ros__parameters:
+    use_sim_time: True
+
+
+

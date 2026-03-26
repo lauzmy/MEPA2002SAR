@@ -9,12 +9,16 @@
   <author>Michael Carroll</author>
   <author>Dharini Dutia</author>
 
-  <depend>joint_state_publisher_gui</depend>
+  <depend>joint_state_publisher</depend>
 
   <depend>ros_gz</depend>
   <depend>sdformat_urdf</depend>
   <depend>ros_gz_description</depend>
   <depend>ros_gz_gazebo</depend>
+  <depend>rviz2</depend>
+  <depend>tf2_ros</depend>
+  <depend>slam_toolbox</depend>
+  <depend>nav2_bringup</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
