@@ -10,6 +10,10 @@ services:
       DISPLAY: ${DISPLAY:-:0}
       XAUTHORITY: /home/ubuntu/.Xauthority
       QT_X11_NO_MITSHM: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      GALLIUM_DRIVER: llvmpipe
+      GZ_RENDER_ENGINE: ogre
+      IGN_RENDER_ENGINE: ogre
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
