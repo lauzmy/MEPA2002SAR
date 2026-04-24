@@ -17,7 +17,6 @@ def generate_launch_description():
     pkg_ros_gz_sim = get_package_share_directory('ros_gz_sim')
     pkg_example_gazebo = get_package_share_directory('ros_gz_gazebo')
     pkg_slam_toolbox = get_package_share_directory('slam_toolbox')
-    pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
 
     # World xacro -> sdf (samme stil som roboten)
     world_xacro_file = os.path.join(pkg_example_gazebo, 'worlds', 'test_xacro.sdf.xacro')
@@ -80,9 +79,24 @@ def generate_launch_description():
         output='screen'
     )
 
+    lidar_sweeper = Node(
+        package='ros_gz_application',
+        executable='lidar_sweeper',
+        name='lidar_sweeper',
+        output='screen'
+    )
+
     slam_params_default = os.path.join(
             pkg_project_bringup, 'config', 'mapper_params_online_async.yaml'
         )
+    
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[os.path.join(pkg_project_bringup, 'config', 'ekf.yaml')]
+    )
     
     slam = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -106,6 +120,8 @@ def generate_launch_description():
                             description='Path to slam_toolbox params yaml'),
         bridge,
         robot_state_publisher,
+        lidar_sweeper,
+        ekf_node,
         slam,
         rviz
     ])

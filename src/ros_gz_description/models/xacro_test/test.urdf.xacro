@@ -267,11 +267,28 @@
 
 
 
-  <!-- LiDAR link -->
-  <joint name="lidar_joint" type="fixed">
+  <!-- HINGE LINK (Vippepunktet) -->
+  <joint name="lidar_joint" type="revolute">
     <parent link="body_link"/>
-    <child link="lidar_link"/>
+    <child link="lidar_hinge_link"/>
     <origin xyz="0 0 ${s1+s5}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/> <!-- Vipper opp og ned om Y-aksen -->
+    <limit lower="-0.785398" upper="0.785398" effort="10.0" velocity="5.0"/> <!-- +/- 45 grader -->
+    <dynamics damping="0.1" friction="0.1"/>
+  </joint>
+
+  <link name="lidar_hinge_link">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <!-- SENSOR LINK (Forskyvningen på 32mm over vippepunktet) -->
+  <joint name="lidar_sensor_joint" type="fixed">
+    <parent link="lidar_hinge_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.032" rpy="0 0 0"/> <!-- 32 mm opp (Z-aksen) -->
   </joint>
 
   <link name="lidar_link">
@@ -313,10 +330,10 @@
             <max_angle>3.14159</max_angle>
           </horizontal>
           <vertical>
-            <samples>16</samples>
+            <samples>1</samples>
             <resolution>1</resolution>
-            <min_angle>-0.10</min_angle>
-            <max_angle>0.10</max_angle>
+            <min_angle>0.0</min_angle>
+            <max_angle>0.0</max_angle>
           </vertical>
         </scan>
         <range>
@@ -358,12 +375,12 @@
 
   <!-- Gazebo camera sensor -->
   <gazebo reference="camera_link">
-    <sensor name="front_thermal_camera" type="thermal_camera">
+    <sensor name="front_camera" type="camera">
       <always_on>true</always_on>
       <update_rate>20</update_rate>
       <visualize>true</visualize>
-      <topic>/camera/thermal/image_raw</topic>
-      <camera_info_topic>/camera/thermal/camera_info</camera_info_topic>
+      <topic>/camera/image_raw</topic>
+      <camera_info_topic>/camera/camera_info</camera_info_topic>
       <thermal_camera>
         <horizontal_fov>1.3962634</horizontal_fov>
         <image>
@@ -458,9 +475,19 @@
       <child_frame_id>base_footprint</child_frame_id>
       <odom_publish_frequency>50</odom_publish_frequency>
     </plugin>
-  
+
     <!-- JointStatePublisher plugin -->
     <plugin filename="gz-sim-joint-state-publisher-system"
-            name="gz::sim::systems::JointStatePublisher"/>
-  </gazebo>
+            name="gz::sim::systems::JointStatePublisher">
+    </plugin>
+  
+    <!-- Lidar Pitch Controller -->
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>lidar_joint</joint_name>
+      <p_gain>10.0</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>0.1</d_gain>
+    </plugin>
+  </gazebo> 
 </robot>

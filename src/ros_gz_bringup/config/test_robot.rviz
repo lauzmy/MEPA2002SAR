@@ -271,7 +271,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /camera/thermal/image_raw
+        Value: /camera/image_raw
       Normalize Range: true
       Min Value: 0
       Max Value: 1

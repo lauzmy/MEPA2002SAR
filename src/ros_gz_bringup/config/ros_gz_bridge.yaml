@@ -34,26 +34,20 @@
   gz_type_name: "gz.msgs.Model"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/tf"
-  gz_topic_name: "/model/test_robot/tf"
-  ros_type_name: "tf2_msgs/msg/TFMessage"
-  gz_type_name: "gz.msgs.Pose_V"
-  direction: GZ_TO_ROS
-
 - ros_topic_name: "/tf_static"
   gz_topic_name: "/model/test_robot/pose_static"
   ros_type_name: "tf2_msgs/msg/TFMessage"
   gz_type_name: "gz.msgs.Pose_V"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/camera/thermal/image_raw"
-  gz_topic_name: "/camera/thermal/image_raw"
+- ros_topic_name: "/camera/image_raw"
+  gz_topic_name: "/camera/image_raw"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/camera/thermal/camera_info"
-  gz_topic_name: "/camera/thermal/camera_info"
+- ros_topic_name: "/camera/camera_info"
+  gz_topic_name: "/camera/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS
@@ -63,3 +57,9 @@
   ros_type_name: "sensor_msgs/msg/Imu"
   gz_type_name: "gz.msgs.IMU"
   direction: GZ_TO_ROS
+
+- ros_topic_name: "/lidar_cmd_pos"
+  gz_topic_name: "/model/test_robot/joint/lidar_joint/0/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ

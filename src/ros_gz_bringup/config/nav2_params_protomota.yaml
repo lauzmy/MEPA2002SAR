@@ -99,7 +99,7 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 3.0   # Reduced from 5.0 to lower CPU load
+      update_frequency: 10.0   # Reduced from 5.0 to lower CPU load
       publish_frequency: 1.0  # Reduced from 2.0
       global_frame: odom
       robot_base_frame: base_footprint
@@ -116,10 +116,10 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 3.0
+        cost_scaling_factor: 8.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.50
+        inflation_radius: 0.4
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -147,19 +147,19 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      update_frequency: 1.0
+      update_frequency: 10.0
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: True
-      robot_radius: 0.20
+      robot_radius: 0.15
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan pointcloud
+        observation_sources: scan
         scan:
           topic: /test_robot/scan
           max_obstacle_height: 2.0
@@ -177,10 +177,10 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 3.0
+        cost_scaling_factor: 4.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.50
+        inflation_radius: 0.4
       always_send_full_costmap: True
 
 map_server:
@@ -294,7 +294,7 @@ collision_monitor:
     polygons: ["stop_polygon"]
     stop_polygon:
       type: "polygon"
-      points: "[[0.35, 0.25], [0.35, -0.25], [-0.35, -0.25], [-0.35, 0.25]]"
+      points: "[[0.20, 0.20], [0.20, -0.20], [-0.20, -0.20], [-0.20, 0.20]]"
       action_type: "stop"
       visualize: True
       polygon_pub_topic: "polygon_stop"
@@ -317,6 +317,7 @@ docking_server:
       staging_x_offset: -0.7
       use_external_detection_pose: true
       use_battery_status: false
+
 
 docking_server_rclcpp_node:
   ros__parameters:

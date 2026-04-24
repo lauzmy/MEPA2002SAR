@@ -9,4 +9,10 @@ install(PROGRAMS
 	DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+	noder/lidar_sweeper.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME lidar_sweeper
+)
+
 ament_package()
