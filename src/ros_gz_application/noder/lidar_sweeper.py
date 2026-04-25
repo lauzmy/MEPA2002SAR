@@ -13,7 +13,7 @@ class LidarSweeper(Node):
         self.timer = self.create_timer(0.05, self.timer_callback) # 20 Hz
         self.start_time = time.time()
         
-        self.amplitude = 0.0 # Radianer (ca. 30 grader opp og ned)
+        self.amplitude = 0.5 # Radianer (ca. 30 grader opp og ned)
         self.speed = 2.0     # Hastighet på vippingen
 
     def timer_callback(self):

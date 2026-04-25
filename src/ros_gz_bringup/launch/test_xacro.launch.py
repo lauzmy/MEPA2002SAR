@@ -86,6 +86,20 @@ def generate_launch_description():
         output='screen'
     )
 
+    laser_assembler_node = Node(
+        package='ros_gz_application',
+        executable='laser_assembler',
+        name='tilt_laser_assembler',
+        output='screen',
+        parameters=[{
+            'use_sim_time': True # VIKTIG for at TF2 og klokken skal synkroniseres med Gazebo
+        }],
+        remappings=[
+            # Noden din lytter til '/scan', men Gazebo-bridgen publiserer til '/test_robot/scan'
+            ('/scan', '/test_robot/scan') 
+        ]
+    )
+
     slam_params_default = os.path.join(
             pkg_project_bringup, 'config', 'mapper_params_online_async.yaml'
         )
@@ -121,6 +135,7 @@ def generate_launch_description():
         bridge,
         robot_state_publisher,
         lidar_sweeper,
+        laser_assembler_node,
         ekf_node,
         slam,
         rviz

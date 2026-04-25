@@ -15,4 +15,10 @@ install(PROGRAMS
 	RENAME lidar_sweeper
 )
 
+install(PROGRAMS
+	noder/laser_assembler.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME laser_assembler
+)
+
 ament_package()
