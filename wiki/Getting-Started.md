@@ -182,6 +182,15 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 
 ---
 
+## Step 9: Launch Nav2
+
+```bash
+sudo apt install ros-jazzy-navigation2 ros-jazzy-nav2-bringup
+
+ros2 lauch nav2_bringup bringup_launch.py use_sim_time:=True params_file:=$(ros2 pkg prefix ros_gz_bringup)/share/ros_gz_bringup/config/nav2_params_protoma.yaml
+```
+---
+
 ## Optional: Run with Docker
 
 If you prefer to use Docker instead of a local install, a `Dockerfile` is provided at the root of the repository.
