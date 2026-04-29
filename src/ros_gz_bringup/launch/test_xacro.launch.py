@@ -100,6 +100,13 @@ def generate_launch_description():
         ]
     )
 
+    YOLO_node = Node(
+        package='ros_gz_application',
+        executable='YOLO',
+        name='yolo_coco_node',
+        output='screen',
+    )
+
     slam_params_default = os.path.join(
             pkg_project_bringup, 'config', 'mapper_params_online_async.yaml'
         )
@@ -124,6 +131,7 @@ def generate_launch_description():
     )
 
 
+
     return LaunchDescription([
         gz_resource_path,
         gz_sim,
@@ -138,5 +146,6 @@ def generate_launch_description():
         laser_assembler_node,
         ekf_node,
         slam,
-        rviz
+        rviz,
+        YOLO_node
     ])

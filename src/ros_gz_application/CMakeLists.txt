@@ -21,4 +21,11 @@ install(PROGRAMS
 	RENAME laser_assembler
 )
 
+install(PROGRAMS
+	noder/YOLO.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME YOLO
+	)
+
+
 ament_package()
