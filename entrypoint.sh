@@ -7,8 +7,8 @@ source /opt/ros/jazzy/setup.bash
 # Runs on every container start so changes to src/ are always satisfied.
 if [ -d "${ROS_WS}/MEPA2002SAR/src" ]; then
     rosdep update -n --rosdistro "$ROS_DISTRO" || true
-    apt-get update
-    rosdep install --from-paths "${ROS_WS}/MEPA2002SAR/src" --ignore-src -r -y --rosdistro "$ROS_DISTRO" 2>&1
+    apt-get update || true
+    rosdep install --from-paths "${ROS_WS}/MEPA2002SAR/src" --ignore-src -r -y --rosdistro "$ROS_DISTRO" 2>&1 || true
 fi
 
 if [ -n "$USERNAME" ] && id "$USERNAME" >/dev/null 2>&1; then
