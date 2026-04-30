@@ -10,22 +10,33 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-	noder/lidar_sweeper.py
+	nodes/lidar_sweeper.py
 	DESTINATION lib/${PROJECT_NAME}
 	RENAME lidar_sweeper
 )
 
 install(PROGRAMS
-	noder/laser_assembler.py
+	nodes/laser_assembler.py
 	DESTINATION lib/${PROJECT_NAME}
 	RENAME laser_assembler
 )
 
 install(PROGRAMS
-	noder/YOLO.py
+	nodes/YOLO.py
 	DESTINATION lib/${PROJECT_NAME}
 	RENAME YOLO
-	)
+)
 
+install(PROGRAMS
+	nodes/YOLO_gstreamer.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME YOLO_gstreamer
+)
+
+install(PROGRAMS
+	nodes/IMU.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME IMU	
+)
 
 ament_package()

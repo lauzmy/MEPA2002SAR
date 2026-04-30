@@ -35,6 +35,14 @@ def generate_launch_description():
         ]
     )
 
+    IMU_node = Node(
+        package='ros_gz_application',
+        executable='IMU',
+        name='imu_node',
+        output='screen',
+        parameters=[{'use_sim_time': False}]
+    )
+
     # 4. Ekte Sensorer 
     # Vår nye LiDAR node (pass på at typen, f.eks LD19, stemmer med din lidar)
     ldlidar_node = Node(
