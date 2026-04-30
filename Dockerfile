@@ -3,6 +3,7 @@ FROM ros:jazzy-ros-base
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 ENV GZ_VERSION=harmonic
+ENV ROS_DOMAIN_ID=73
 ARG USERNAME=ubuntu
 ARG USER_UID=1000
 ARG USER_GID=1000
