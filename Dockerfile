@@ -29,8 +29,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-gz-plugin-vendor \
     ros-jazzy-gz-sim-vendor \
     ros-jazzy-usb-cam \
-    python3-adafruit-circuitpython-bno08x \
  && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x
 
 # Create a development user that matches the host UID/GID.
 RUN set -eux; \
