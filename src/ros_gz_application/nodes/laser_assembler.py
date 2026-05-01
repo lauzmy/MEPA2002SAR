@@ -13,60 +13,60 @@ class TiltLaserAssembler(Node):
     def __init__(self):
         super().__init__('tilt_laser_assembler')
 
-        # --- Konfigurasjon ---
-        self.fixed_frame = 'odom'        # Rammen som står stille i verden
-        self.robot_frame = 'base_footprint'   # Rammen til robotens senter
-        self.sweep_duration = 2.0        # Hvor lang tid ett fullt vippesveip tar (sekunder)
+        # --- Configuration ---
+        self.fixed_frame = 'odom'        # The stationary frame in the world
+        self.robot_frame = 'base_footprint'   # The frame of the robot's center
+        self.sweep_duration = 2.0        # How long it takes for a full sweep (seconds)
 
-        # TF2 Oppsett for å hente transformasjoner (posisjoner)
+        # TF2 Setup for getting transformation between laser and world)
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-        # Verktøy for å gjøre 2D skann om til 3D punkter
+        # Tool for convertion fra LaserScan til PointCloud2
         self.laser_proj = LaserProjection()
 
-        # State (lagring av punkter underveis i sveipet)
+        # State (saving points and timing throughout sweep)
         self.accumulated_points = []
         self.sweep_start_time = self.get_clock().now()
 
-        # Publishers og Subscribers
+        # Publishers and Subscribers
         self.sub = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
         self.pub = self.create_publisher(PointCloud2, '/assembled_cloud', 10)
         
         self.get_logger().info("Tilt Laser Assembler startet! Samler 3D-data...")
 
     def scan_callback(self, scan_msg):
-        # 1. Gjør om 2D-skann til en lokal PointCloud2 (i laserens egen roterende ramme)
+        # 1. Convert LaserScan to a local PointCloud2 (in the laser's own rotating frame)
         cloud_local = self.laser_proj.projectLaser(scan_msg)
 
         try:
-            # 2. Finn ut hvor laseren var i verden (odom) akkurat da bildet ble tatt
-            # Vi bruker scan_msg.header.stamp for å få nøyaktig tidspunkt for skannet
+            # 2. Find out where the laser was in the world (odom) at the time the scan was taken
+            # We use scan_msg.header.stamp to get the exact timestamp for the scan
             trans_to_fixed = self.tf_buffer.lookup_transform(
                 self.fixed_frame,
                 scan_msg.header.frame_id,
-                Time().to_msg(),       # <--- HENT ALLTID DET NYESTE!
+                Time().to_msg(),
                 timeout=rclpy.duration.Duration(seconds=0.1)
             )
 
-            # 3. Flytt punktene fra laseren og ut i den faste verdensrammen
+            # 3. Move the points from the laser to the fixed world frame
             cloud_fixed = tf2_sensor_msgs.tf2_sensor_msgs.do_transform_cloud(cloud_local, trans_to_fixed)
 
-            # 4. Trekk ut (X, Y, Z)-koordinatene og lagre dem i listen vår
+            # 4. Extract (X, Y, Z)-coordinates and store them in our list
             points = pc2.read_points(cloud_fixed, field_names=("x", "y", "z"), skip_nans=True)
             self.accumulated_points.extend(points)
 
         except tf2_ros.TransformException as e:
-            self.get_logger().warn(f"TF-feil: Kunne ikke finne transformasjon for skann: {e}")
+            self.get_logger().warn(f"TF-error: Could not find transformation for scan: {e}")
             return
 
-        # 5. Sjekk om sveipet er ferdig (basert på tid)
+        # 5. Check if the sweep is finished (based on time)
         now = self.get_clock().now()
         elapsed_time = (now - self.sweep_start_time).nanoseconds / 1e9
         
         if elapsed_time >= self.sweep_duration:
             self.publish_assembled_cloud(now)
-            # Nullstill for neste sveip
+            # Reset for next sweep
             self.accumulated_points = []
             self.sweep_start_time = now
 
@@ -74,32 +74,32 @@ class TiltLaserAssembler(Node):
         if not self.accumulated_points:
             return
 
-        # Lag en ny header for den sammensatte skyen (i fixed_frame først)
+        # Make a new header for the assembled cloud (in fixed_frame first)
         header_fixed = Header()
         header_fixed.stamp = timestamp.to_msg()
         header_fixed.frame_id = self.fixed_frame
 
-        # Lag en PointCloud2 fra alle punktene vi har samlet i odom-rammen
+        # Make a PointCloud2 from all the points we have collected in the odom frame
         assembled_cloud_fixed = pc2.create_cloud_xyz32(header_fixed, self.accumulated_points)
 
         try:
-            # Finn transformasjonen fra odom og tilbake til robotens NÅVÆRENDE posisjon
+            # Find the transformation from odom to the robot's current position
             trans_to_robot = self.tf_buffer.lookup_transform(
                 self.robot_frame,
                 self.fixed_frame,
-                Time().to_msg(),       # <--- HENT ALLTID DET NYESTE HER OGSÅ
+                Time().to_msg(),
                 timeout=rclpy.duration.Duration(seconds=0.1)
             )
 
-            # Flytt hele den ferdige 3D-skyen tilbake til robotens ramme (base_link)
+            # Move the entire assembled 3D cloud back to the robot's frame (base_link)
             final_cloud = tf2_sensor_msgs.tf2_sensor_msgs.do_transform_cloud(assembled_cloud_fixed, trans_to_robot)
             
-            # Publiser den ferdige, bevegelses-kompenserte 3D-skyen til MOLA!
+            # Publish the assembled, motion-compensated 3D cloud to MOLA!
             self.pub.publish(final_cloud)
-            self.get_logger().info(f"Publiserte 3D-sky med {len(self.accumulated_points)} punkter.")
+            self.get_logger().info(f"Published 3D cloud with {len(self.accumulated_points)} points.")
 
         except tf2_ros.TransformException as e:
-            self.get_logger().warn(f"Kunne ikke transformere ferdig sky til {self.robot_frame}: {e}")
+            self.get_logger().warn(f"Could not transform assembled cloud to {self.robot_frame}: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

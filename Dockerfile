@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-gz-common-vendor \
     ros-jazzy-gz-plugin-vendor \
     ros-jazzy-gz-sim-vendor \
+    ros-jazzy-usb-cam \
+    python3-adafruit-circuitpython-bno08x \
  && rm -rf /var/lib/apt/lists/*
 
 # Create a development user that matches the host UID/GID.

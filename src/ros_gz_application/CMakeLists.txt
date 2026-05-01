@@ -39,4 +39,10 @@ install(PROGRAMS
 	RENAME IMU	
 )
 
+install(PROGRAMS
+	nodes/allocator.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME allocator
+)
+
 ament_package()

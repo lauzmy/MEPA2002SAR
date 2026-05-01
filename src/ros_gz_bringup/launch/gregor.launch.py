@@ -35,6 +35,14 @@ def generate_launch_description():
         ]
     )
 
+    allocator_node = Node(
+        package='ros_gz_application',
+        executable='allocator',
+        name='allocator_node',
+        output='screen',
+        parameters=[{'use_sim_time': False}]
+    )
+
     IMU_node = Node(
         package='ros_gz_application',
         executable='IMU',
@@ -58,19 +66,22 @@ def generate_launch_description():
         ]
     )
 
-    # Kamera Node (bruker "camera_ros" eller hva du ender med for Raspberry Pi)
+    # Kamera Node for USB-kamera (bruker usb_cam)
     camera_node = Node(
-        package='camera_ros',
-        executable='camera_node',
+        package='usb_cam',
+        executable='usb_cam_node_exe',
         name='camera_node',
         parameters=[
+            {'video_device': '/dev/video0'}, # Standard for første USB-kamera
             {'frame_id': 'camera_link'},
+            {'image_width': 640},            # Tilpass oppløsningen til ditt kamera
+            {'image_height': 480},
+            {'framerate': 25.0},
             {'use_sim_time': False}
         ],
-        # Remapper standard kamera topics tilbake slik de var i Gazebo Bridge
         remappings=[
-            ('/camera/image_raw', '/camera/image_raw'),
-            ('/camera/camera_info', '/camera/camera_info')
+            ('/image_raw', '/camera/image_raw'),     # Gjør at topics fra usb_cam matcher
+            ('/camera_info', '/camera/camera_info')  # forventningene fra Gazebo/resten av koden
         ]
     )
 
@@ -81,8 +92,8 @@ def generate_launch_description():
         name='ekf_filter_node',
         output='screen',
         parameters=[
-            os.path.join(pkg_project_bringup, 'config', 'ekf.yaml'),
-            {'use_sim_time': False} # Overskriver 'true' innstillingen som ligger inne i ekf.yaml!
+            os.path.join(pkg_project_bringup, 'config', 'ekf_imu.yaml'),
+            {'use_sim_time': False} # Overskriver 'true' innstillingen som ligger inne i ekf_imu.yaml!
         ]
     )
     
@@ -118,10 +129,11 @@ def generate_launch_description():
         rviz_arg,
         slam_arg,
         robot_state_publisher,
+        IMU_node,
+        allocator_node,
         ldlidar_node,
         camera_node,
         ekf_node,
         slam,
         lidar_sweeper,
-        rviz
     ])
