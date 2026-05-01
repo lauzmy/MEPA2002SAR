@@ -8,10 +8,9 @@ services:
 
     environment:
       DISPLAY: ${DISPLAY:-:0}
-      XAUTHORITY: /home/ubuntu/.docker.xauth
+      XAUTHORITY: /home/ubuntu/.Xauthority
       QT_X11_NO_MITSHM: "1"
       LIBGL_ALWAYS_SOFTWARE: "1"
-      LIBGL_ALWAYS_INDIRECT: "1"
       GALLIUM_DRIVER: llvmpipe
       MESA_GL_VERSION_OVERRIDE: "3.3"
       GZ_RENDER_ENGINE: ogre
@@ -20,7 +19,6 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${HOME}/.Xauthority:/home/ubuntu/.Xauthority:ro
-      - ${HOME}/.docker.xauth:/home/ubuntu/.docker.xauth:ro
       - ${HOME}/ros2_ws:/home/ubuntu/ros2_ws
       - /dev:/dev
 
@@ -31,6 +29,6 @@ services:
       - dialout
       - i2c
       - video
-    
+
     stdin_open: true
     tty: true
