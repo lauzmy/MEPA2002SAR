@@ -3,8 +3,10 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 import serial
 import math
+import time
 
 class MecanumAllocator(Node):
     def __init__(self):
@@ -30,6 +32,17 @@ class MecanumAllocator(Node):
             'cmd_vel', 
             self.cmd_vel_callback,
             10)
+        
+        self.odom_publisher = self.create_publisher(Odometry, '/gregor/odometry', 10)
+
+        # State for odometri-kalkulering
+        self.x = 0.0
+        self.y = 0.0
+        self.theta = 0.0
+        self.last_time = self.get_clock().now()
+
+        # 2. NYTT: En timer som leser fra serial fast (f.eks 50 ganger i sekundet)
+        self.read_timer = self.create_timer(0.02, self.read_serial_data)
 
         # Parameters for robot's dimensions and motors
         self.declare_parameter('lx', 0.145/2)
@@ -112,6 +125,120 @@ class MecanumAllocator(Node):
 
         # Sending over UART
         self.ser.write(bytearray(payload))
+
+
+    def read_serial_data(self):
+        if self.ser is None or not self.ser.is_open:
+            return
+
+        # Ser etter pakker som er 8 bytes lange
+        while self.ser.in_waiting >= 8:
+            # Sjekk at første byte er startbyten før vi leser hele blokken
+            start_byte = self.ser.read(1)
+            if start_byte[0] == 0x55:
+                payload = self.ser.read(7)
+                
+                status_byte = payload[0]
+                rpm1_byte   = payload[1]
+                rpm2_byte   = payload[2]
+                rpm3_byte   = payload[3]
+                rpm4_byte   = payload[4]
+                vbatt_byte  = payload[5]
+                crc_byte    = payload[6]
+
+                # (Valgfritt) verifiser CRC: self.calculate_crc8(bytearray([0x55]) + payload[:-1]) == crc_byte
+                
+                # Siden RPM og respons-retningen må hentes ut, antar vi at 'STATUS' bruker 
+                # de 4 laveste bitene til retning, på samme måte som 'DIRS' da vi sendte:
+                dir_M1 = 1 if (status_byte & 0x01) else -1
+                dir_M2 = 1 if (status_byte & 0x02) else -1
+                dir_M3 = 1 if (status_byte & 0x04) else -1
+                dir_M4 = 1 if (status_byte & 0x08) else -1
+
+                # Konverter bytes til reelle RPM
+                rpm_M1 = rpm1_byte * dir_M1
+                rpm_M2 = rpm2_byte * dir_M2
+                rpm_M3 = rpm3_byte * dir_M3
+                rpm_M4 = rpm4_byte * dir_M4
+
+                self.calculate_and_publish_odom(rpm_M1, rpm_M2, rpm_M3, rpm_M4)
+            else:
+                # Kast bytes inntil vi finner neste 0x55
+                pass
+
+    def calculate_and_publish_odom(self, rpm1, rpm2, rpm3, rpm4):
+        wheel_radius = self.get_parameter('wheel_radius').value
+        lx = self.get_parameter('lx').value
+        ly = self.get_parameter('ly').value
+        L = lx + ly
+
+        # 1. Konverter RPM per hjul tilbake til lineær hjulhastighet (m/s)
+        def rpm_to_ms(rpm):
+            return (rpm * 2 * math.pi * wheel_radius) / 60.0
+
+        v1 = rpm_to_ms(rpm1)
+        v2 = rpm_to_ms(rpm2)
+        v3 = rpm_to_ms(rpm3)
+        v4 = rpm_to_ms(rpm4)
+
+        # 2. Foroverkinematikk (gjør hjulfart til robotfart i Vx, Vy og vinkelhastighet)
+        vx = (v1 + v2 + v3 + v4) / 4.0
+        vy = (-v1 + v2 + v3 - v4) / 4.0
+        wz = (-v1 + v2 - v3 + v4) / (4.0 * L)
+
+        # 3. Odometri integrasjon: Beregn hvor mye vi har flyttet oss siden sist
+        current_time = self.get_clock().now()
+        dt_duration = current_time - self.last_time
+        dt = dt_duration.nanoseconds / 1e9  # Konverter til sekunder
+        self.last_time = current_time
+
+        # Koordinatrotasjon
+        delta_x = (vx * math.cos(self.theta) - vy * math.sin(self.theta)) * dt
+        delta_y = (vx * math.sin(self.theta) + vy * math.cos(self.theta)) * dt
+        delta_theta = wz * dt
+
+        self.x += delta_x
+        self.y += delta_y
+        self.theta += delta_theta
+
+        # 4. Bygg nav_msgs/Odometry melding
+        odom = Odometry()
+        odom.header.stamp = current_time.to_msg()
+        odom.header.frame_id = "odom"
+        odom.child_frame_id = "base_footprint" # Fra ekf_imu oppsettet ditt
+
+        odom.pose.pose.position.x = self.x
+        odom.pose.pose.position.y = self.y
+        odom.pose.pose.position.z = 0.0
+
+        # Enkel quaternion bygge from yaw (theta)
+        odom.pose.pose.orientation.z = math.sin(self.theta / 2.0)
+        odom.pose.pose.orientation.w = math.cos(self.theta / 2.0)
+
+        odom.twist.twist.linear.x = vx
+        odom.twist.twist.linear.y = vy
+        odom.twist.twist.angular.z = wz
+
+
+        # Covariance (Usikkerhet). Et diagonalt array med 36 elementer.
+        # Setter en liten usikkerhet (f.eks 0.01) på x, y, z, roll, pitch og yaw.
+        odom.pose.covariance[0] = 0.01   # x
+        odom.pose.covariance[7] = 0.01   # y
+        odom.pose.covariance[14] = 0.01  # z
+        odom.pose.covariance[21] = 0.01  # roll
+        odom.pose.covariance[28] = 0.01  # pitch
+        odom.pose.covariance[35] = 0.01  # yaw (theta)
+
+        # Usikkerhet for hastigheten (twist)
+        odom.twist.covariance[0] = 0.01  # vx
+        odom.twist.covariance[7] = 0.01  # vy
+        odom.twist.covariance[14] = 0.01 # vz
+        odom.twist.covariance[21] = 0.01 # roll rate
+        odom.twist.covariance[28] = 0.01 # pitch rate
+        odom.twist.covariance[35] = 0.01 # yaw rate
+
+        # Publiser odometrien ut
+        self.odom_publisher.publish(odom)
 
 def main(args=None):
     rclpy.init(args=args)
