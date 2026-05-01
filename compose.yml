@@ -22,7 +22,12 @@ services:
       - /dev:/dev
 
     devices:
-      - /dev/dri:/dev/dri
-
+      - "/dev/i2c-1:/dev/i2c-1"
+      # - "/dev/video0:/dev/video0" (for kameraet fra forrige feil)
+    group_add:
+      - dialout
+      - i2c
+      - video
+    
     stdin_open: true
     tty: true

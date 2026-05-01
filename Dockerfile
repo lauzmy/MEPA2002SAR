@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-usb-cam \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x
+RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x rpi-lgpio
 
 # Create a development user that matches the host UID/GID.
 RUN set -eux; \
@@ -51,6 +51,9 @@ RUN set -eux; \
     else \
         useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home --shell /bin/bash "${USERNAME}"; \
     fi
+    
+# Add the user to additional groups for hardware access.
+RUN groupadd -f i2c && usermod -aG dialout,i2c,video,tty ${USERNAME}
 
 # Initialize rosdep (idempotent).
 RUN [ -f /etc/ros/rosdep/sources.list.d/20-default.list ] || rosdep init \
