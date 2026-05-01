@@ -8,7 +8,6 @@ services:
 
     environment:
       DISPLAY: ${DISPLAY:-:0}
-      XAUTHORITY: /home/ubuntu/.Xauthority
       QT_X11_NO_MITSHM: "1"
       LIBGL_ALWAYS_SOFTWARE: "1"
       GALLIUM_DRIVER: llvmpipe
@@ -16,8 +15,7 @@ services:
       IGN_RENDER_ENGINE: ogre
 
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${HOME}/.docker.xauth:/home/ubuntu/.Xauthority:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${HOME}/ros2_ws:/home/ubuntu/ros2_ws
       - /dev:/dev
 
