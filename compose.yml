@@ -11,6 +11,7 @@ services:
       XAUTHORITY: /home/ubuntu/.docker.xauth
       QT_X11_NO_MITSHM: "1"
       LIBGL_ALWAYS_SOFTWARE: "1"
+      LIBGL_ALWAYS_INDIRECT: "1"
       GALLIUM_DRIVER: llvmpipe
       MESA_GL_VERSION_OVERRIDE: "3.3"
       GZ_RENDER_ENGINE: ogre
