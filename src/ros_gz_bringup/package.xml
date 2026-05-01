@@ -21,6 +21,13 @@
   <depend>nav2_bringup</depend>
   <depend>robot_localization</depend>
 
+  <depend>xacro</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>ros_gz_bridge</depend>
+  <depend>ros_gz_application</depend>
+  <depend>camera_ros</depend>
+  <depend>ldlidar</depend> 
+
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <test_depend>ament_lint_auto</test_depend>
