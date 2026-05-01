@@ -41,25 +41,14 @@ x11:
 	  exit 1; \
 	fi
 	@DISP=$${DISPLAY:-:0}; \
-	 echo "Using DISPLAY=$$DISP, HOME=$$HOME"; \
+	 echo "Using DISPLAY=$$DISP, HOME=$$HOME, XAUTHORITY=$${XAUTHORITY:-~/.Xauthority}"; \
 	 rm -rf $$HOME/.docker.xauth; \
 	 touch $$HOME/.docker.xauth; \
 	 chmod 777 $$HOME/.docker.xauth; \
-	 COOKIES_WRITTEN=0; \
-	 if [ -n "$$XAUTHORITY" ] && [ -f "$$XAUTHORITY" ]; then \
-	   echo "Using XAUTHORITY=$$XAUTHORITY (SSH temp file)"; \
-	   xauth -f "$$XAUTHORITY" nlist 2>/dev/null | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge - 2>/dev/null; \
-	   COOKIES_WRITTEN=$$(xauth -f $$HOME/.docker.xauth list | wc -l); \
-	 fi; \
-	 if [ "$$COOKIES_WRITTEN" = "0" ]; then \
-	   echo "Trying fallback: searching for SSH xauth files in /tmp..."; \
-	   for f in $$(find /tmp -maxdepth 3 -name "xauth-*" -user $$(id -un) 2>/dev/null); do \
-	     echo "  Found: $$f"; \
-	     xauth -f "$$f" nlist 2>/dev/null | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge - 2>/dev/null; \
-	   done; \
-	   COOKIES_WRITTEN=$$(xauth -f $$HOME/.docker.xauth list | wc -l); \
-	 fi; \
-	 echo "xauth cookies written: $$COOKIES_WRITTEN"; \
+	 XAUTH_SRC=$${XAUTHORITY:-$$HOME/.Xauthority}; \
+	 echo "Copying all cookies from $$XAUTH_SRC (with FamilyWild):"; \
+	 xauth -f "$$XAUTH_SRC" nlist | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge -; \
+	 echo "xauth cookies written: $$(xauth -f $$HOME/.docker.xauth list | wc -l)"; \
 	 xauth -f $$HOME/.docker.xauth list
 	@echo "X11 access configured for Docker GUI apps."
 
