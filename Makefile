@@ -31,9 +31,10 @@ recreate:
 	docker compose down
 	docker compose up -d
 
-# Run once per local desktop session to allow GUI apps from the container.
-# Do NOT run with sudo – must run as the desktop user who owns the X session.
-# When using SSH X11 forwarding (ssh -X), $DISPLAY is set automatically in your session.
+# Run once per SSH session on the Pi to allow GUI apps from the container.
+# With SSH X11 forwarding (ssh -X), run this on the Pi – xauth cookies are
+# copied from the SSH temp XAUTHORITY file into ~/.docker.xauth for the container.
+# NOTE: xhost must be run on your LOCAL LAPTOP (where the X server runs), not here.
 x11:
 	@if [ "$$(id -u)" = "0" ]; then \
 	  echo "ERROR: Do not run 'make x11' with sudo. Run as your normal desktop user."; \
@@ -41,20 +42,25 @@ x11:
 	fi
 	@DISP=$${DISPLAY:-:0}; \
 	 echo "Using DISPLAY=$$DISP, HOME=$$HOME"; \
-	 rm -f $$HOME/.docker.xauth; \
+	 rm -rf $$HOME/.docker.xauth; \
 	 touch $$HOME/.docker.xauth; \
 	 chmod 777 $$HOME/.docker.xauth; \
-	 XAUTH_SRC=$${XAUTHORITY:-$$HOME/.Xauthority}; \
-	 echo "Using XAUTHORITY=$$XAUTH_SRC"; \
-	 if [ -f "$$XAUTH_SRC" ]; then \
-	   xauth -f "$$XAUTH_SRC" nlist 2>/dev/null | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge - 2>/dev/null; \
-	   echo "xauth cookies written: $$(xauth -f $$HOME/.docker.xauth list | wc -l)"; \
-	   xauth -f $$HOME/.docker.xauth list; \
-	 else \
-	   echo "WARNING: No XAUTHORITY file found at $$XAUTH_SRC"; \
-	 fi
-	@DISPLAY=$${DISPLAY:-:0} xhost +localhost 2>/dev/null && echo "xhost: localhost TCP connections allowed" || echo "xhost: failed – ensure DISPLAY is set"
-	@DISPLAY=$${DISPLAY:-:0} xhost +local: 2>/dev/null && echo "xhost: local socket connections allowed" || true
+	 COOKIES_WRITTEN=0; \
+	 if [ -n "$$XAUTHORITY" ] && [ -f "$$XAUTHORITY" ]; then \
+	   echo "Using XAUTHORITY=$$XAUTHORITY (SSH temp file)"; \
+	   xauth -f "$$XAUTHORITY" nlist 2>/dev/null | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge - 2>/dev/null; \
+	   COOKIES_WRITTEN=$$(xauth -f $$HOME/.docker.xauth list | wc -l); \
+	 fi; \
+	 if [ "$$COOKIES_WRITTEN" = "0" ]; then \
+	   echo "Trying fallback: searching for SSH xauth files in /tmp..."; \
+	   for f in $$(find /tmp -maxdepth 3 -name "xauth-*" -user $$(id -un) 2>/dev/null); do \
+	     echo "  Found: $$f"; \
+	     xauth -f "$$f" nlist 2>/dev/null | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge - 2>/dev/null; \
+	   done; \
+	   COOKIES_WRITTEN=$$(xauth -f $$HOME/.docker.xauth list | wc -l); \
+	 fi; \
+	 echo "xauth cookies written: $$COOKIES_WRITTEN"; \
+	 xauth -f $$HOME/.docker.xauth list
 	@echo "X11 access configured for Docker GUI apps."
 
 ros_build:
