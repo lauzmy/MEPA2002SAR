@@ -44,9 +44,12 @@ x11:
 	 touch $$HOME/.docker.xauth; \
 	 chmod 600 $$HOME/.docker.xauth; \
 	 XAUTH_SRC=$${XAUTHORITY:-$$HOME/.Xauthority}; \
-	 if xauth -f "$$XAUTH_SRC" nlist "$$DISP" 2>/dev/null | grep -q .; then \
-	   xauth -f "$$XAUTH_SRC" nlist "$$DISP" | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge -; \
+	 if xauth nlist "$$DISP" 2>/dev/null | grep -q .; then \
+	   xauth nlist "$$DISP" | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge -; \
 	   echo "xauth cookies written: $$(xauth -f $$HOME/.docker.xauth list | wc -l)"; \
+	 elif xauth -f "$$XAUTH_SRC" nlist "$$DISP" 2>/dev/null | grep -q .; then \
+	   xauth -f "$$XAUTH_SRC" nlist "$$DISP" | sed 's/^..../ffff/' | xauth -f $$HOME/.docker.xauth nmerge -; \
+	   echo "xauth cookies written (from $$XAUTH_SRC): $$(xauth -f $$HOME/.docker.xauth list | wc -l)"; \
 	 else \
 	   echo "WARNING: No xauth cookies found for $$DISP – falling back to xhost +local:"; \
 	 fi
