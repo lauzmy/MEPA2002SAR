@@ -61,7 +61,7 @@ def generate_launch_description():
         parameters=[
             {'serial_port': '/dev/ttyAMA0'},  # Bytt ut basert på porten til Pi-en
             {'topic_name': '/test_robot/scan'}, # Leser samme topic som simuleringen
-            {'frame_id': 'lidar_link'},       # Navnet på linken i din xacro
+            {'frame_id': 'laser'},       # Navnet på linken i din xacro
             {'lidar_type': 'LD06'}
         ]
     )
