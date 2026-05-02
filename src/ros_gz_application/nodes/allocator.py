@@ -134,7 +134,6 @@ class MecanumAllocator(Node):
         if self.ser is None or not self.ser.is_open:
             return
         
-        self.get_logger().info(f"Bytes in waiting: {self.ser.in_waiting}")
 
         # Looking for packs which are 8 bytes
         while self.ser.in_waiting >= 8:
