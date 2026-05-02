@@ -8,6 +8,7 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.actions import TimerAction, LogInfo
 
 def generate_launch_description():
     pkg_project_bringup = get_package_share_directory('ros_gz_bringup')
@@ -131,6 +132,16 @@ def generate_launch_description():
         parameters=[{'use_sim_time': False}],
         condition=IfCondition(LaunchConfiguration('rviz'))
     )
+    # Venter 5 sekunder før den printer en bekreftelse 
+    ready_message = TimerAction(
+        period=5.0,
+        actions=[
+            LogInfo(msg="\n"
+                        "========================================================\n"
+                        "✅ OPPSTART FULLFØRT! (Sjekk loggen over for evt. feil) ✅\n"
+                        "========================================================")
+        ]
+    )
 
     return LaunchDescription([
         rviz_arg,
@@ -144,4 +155,6 @@ def generate_launch_description():
         slam,
         lidar_sweeper,
         laser_tf_node,
+        ready_message
     ])
+
