@@ -40,19 +40,26 @@ class MecanumAllocator(Node):
         self.y = 0.0
         self.theta = 0.0
         self.last_time = self.get_clock().now()
+        
+        # Variabler for å holde på den siste hastighetskommandoen
+        self.target_vx = 0.0
+        self.target_vy = 0.0
+        self.target_wz = 0.0
 
-        # 2. NYTT: En timer som leser fra serial fast (f.eks 50 ganger i sekundet)
+        # Timer which sends data to ESP32
+        self.write_timer = self.create_timer(0.05, self.send_serial_data)
+
+        # Timer which reads data from ESP32
         self.read_timer = self.create_timer(0.02, self.read_serial_data)
 
         # Parameters for robot's dimensions and motors
         self.declare_parameter('lx', 0.145/2)
         self.declare_parameter('ly', 0.160/2)
-        self.declare_parameter('wheel_radius', 0.075/2) # Radius of the wheel in meter 
-        self.declare_parameter('max_rpm', 170.0)        # Maximum RPM at 100% PWM
+        self.declare_parameter('wheel_radius', 0.075/2) 
+        self.declare_parameter('max_rpm', 170.0)        
         self.declare_parameter('max_pwm', 255)
 
     def calculate_crc8(self, data):
-        """Standard CRC-8-calculation for data array"""
         crc = 0x00
         for byte in data:
             crc ^= byte
@@ -65,12 +72,14 @@ class MecanumAllocator(Node):
         return crc
 
     def cmd_vel_callback(self, msg):
+        # Instead of sending to ESP32, ONLY update the internal variables
+        self.target_vx = msg.linear.x
+        self.target_vy = msg.linear.y
+        self.target_wz = msg.angular.z
+
+    def send_serial_data(self):
         if self.ser is None or not self.ser.is_open:
             return
-
-        vx = msg.linear.x
-        vy = msg.linear.y
-        wz = msg.angular.z
 
         lx = self.get_parameter('lx').value
         ly = self.get_parameter('ly').value
@@ -80,21 +89,17 @@ class MecanumAllocator(Node):
 
         L = lx + ly
 
-        # Calculate kinematic velocities for each wheel in m/s
-        v_M1 = vx - vy - (L * wz) # M1
-        v_M2 = vx + vy + (L * wz) # M2
-        v_M3 = vx + vy - (L * wz) # M3
-        v_M4 = vx - vy + (L * wz) # M4
+        # Calculate kinematic velocities for each wheel in m/s with saved target_vx, target_vy and target_wz
+        v_M1 = self.target_vx - self.target_vy - (L * self.target_wz)
+        v_M2 = self.target_vx + self.target_vy + (L * self.target_wz)
+        v_M3 = self.target_vx + self.target_vy - (L * self.target_wz)
+        v_M4 = self.target_vx - self.target_vy + (L * self.target_wz)
 
         def formater_motor_signal(hastighet_ms):
             direction = 1 if hastighet_ms >= 0 else 0
-            
-            # Calculate target RPM for the wheel from velocity in m/s
             rpm_target = (abs(hastighet_ms) * 60.0) / (2 * math.pi * wheel_radius)
-            
-            # Scale RPM requirement to a PWM signal
             pwm = int((rpm_target / max_rpm) * max_pwm)
-            pwm = min(255, max(0, pwm)) # Clamp to 0-255 (1 byte)
+            pwm = min(255, max(0, pwm)) 
             return pwm, direction
 
         pwm_M1, dir_M1 = formater_motor_signal(v_M1)
@@ -102,10 +107,8 @@ class MecanumAllocator(Node):
         pwm_M3, dir_M3 = formater_motor_signal(v_M3)
         pwm_M4, dir_M4 = formater_motor_signal(v_M4)
 
-        # Bitmask for directions: [ ... | M4 | M3 | M2 | M1 ]
         dir_byte = (dir_M4 << 3) | (dir_M3 << 2) | (dir_M2 << 1) | dir_M1
 
-        # Build command packet
         start_byte = 0x55
         cmd_byte = 0x01
 
@@ -119,11 +122,11 @@ class MecanumAllocator(Node):
             dir_byte
         ]
 
-        # Calculate checksum (CRC-8) for payload
         crc8 = self.calculate_crc8(payload)
         payload.append(crc8)
 
-        # Sending over UART
+        # Happens continuously X times per second via write_timer, 
+        # even if cmd_vel_callback has been called or not.
         self.ser.write(bytearray(payload))
 
 
@@ -131,9 +134,9 @@ class MecanumAllocator(Node):
         if self.ser is None or not self.ser.is_open:
             return
 
-        # Ser etter pakker som er 8 bytes lange
+        # Looking for packs which are 8 bytes
         while self.ser.in_waiting >= 8:
-            # Sjekk at første byte er startbyten før vi leser hele blokken
+            # Checking that the first byte is the start byte before we read the whole block
             start_byte = self.ser.read(1)
             if start_byte[0] == 0x55:
                 payload = self.ser.read(7)
@@ -155,7 +158,7 @@ class MecanumAllocator(Node):
                 dir_M3 = 1 if (status_byte & 0x04) else -1
                 dir_M4 = 1 if (status_byte & 0x08) else -1
 
-                # Konverter bytes til reelle RPM
+                # Converting bytes to real RPM
                 rpm_M1 = rpm1_byte * dir_M1
                 rpm_M2 = rpm2_byte * dir_M2
                 rpm_M3 = rpm3_byte * dir_M3
@@ -163,7 +166,7 @@ class MecanumAllocator(Node):
 
                 self.calculate_and_publish_odom(rpm_M1, rpm_M2, rpm_M3, rpm_M4)
             else:
-                # Kast bytes inntil vi finner neste 0x55
+                # Throwing bytes until we find the next 0x55
                 pass
 
     def calculate_and_publish_odom(self, rpm1, rpm2, rpm3, rpm4):
@@ -172,7 +175,7 @@ class MecanumAllocator(Node):
         ly = self.get_parameter('ly').value
         L = lx + ly
 
-        # 1. Konverter RPM per hjul tilbake til lineær hjulhastighet (m/s)
+        # Converting RPM per wheel back to linear wheel velocity (m/s)
         def rpm_to_ms(rpm):
             return (rpm * 2 * math.pi * wheel_radius) / 60.0
 
@@ -181,18 +184,18 @@ class MecanumAllocator(Node):
         v3 = rpm_to_ms(rpm3)
         v4 = rpm_to_ms(rpm4)
 
-        # 2. Foroverkinematikk (gjør hjulfart til robotfart i Vx, Vy og vinkelhastighet)
+        # Forward kinematics (convert wheel velocities to robot velocities in Vx, Vy and angular velocity Wz)
         vx = (v1 + v2 + v3 + v4) / 4.0
         vy = (-v1 + v2 + v3 - v4) / 4.0
         wz = (-v1 + v2 - v3 + v4) / (4.0 * L)
 
-        # 3. Odometri integrasjon: Beregn hvor mye vi har flyttet oss siden sist
+        # 3. Odometrey integration: Calculate how much we have moved since last time
         current_time = self.get_clock().now()
         dt_duration = current_time - self.last_time
-        dt = dt_duration.nanoseconds / 1e9  # Konverter til sekunder
+        dt = dt_duration.nanoseconds / 1e9  # Convert to seconds
         self.last_time = current_time
 
-        # Koordinatrotasjon
+        # Rotation matrix for converting from robot frame to world frame
         delta_x = (vx * math.cos(self.theta) - vy * math.sin(self.theta)) * dt
         delta_y = (vx * math.sin(self.theta) + vy * math.cos(self.theta)) * dt
         delta_theta = wz * dt
@@ -201,7 +204,7 @@ class MecanumAllocator(Node):
         self.y += delta_y
         self.theta += delta_theta
 
-        # 4. Bygg nav_msgs/Odometry melding
+        # 4. Build nav_msgs/Odometry message
         odom = Odometry()
         odom.header.stamp = current_time.to_msg()
         odom.header.frame_id = "odom"
@@ -220,8 +223,8 @@ class MecanumAllocator(Node):
         odom.twist.twist.angular.z = wz
 
 
-        # Covariance (Usikkerhet). Et diagonalt array med 36 elementer.
-        # Setter en liten usikkerhet (f.eks 0.01) på x, y, z, roll, pitch og yaw.
+        # Covariance (Uncertainty). A diagonal array with 36 elements.
+        # Setting a small uncertainty (e.g., 0.01) on x, y, z, roll, pitch and yaw.
         odom.pose.covariance[0] = 0.01   # x
         odom.pose.covariance[7] = 0.01   # y
         odom.pose.covariance[14] = 0.01  # z
@@ -229,7 +232,7 @@ class MecanumAllocator(Node):
         odom.pose.covariance[28] = 0.01  # pitch
         odom.pose.covariance[35] = 0.01  # yaw (theta)
 
-        # Usikkerhet for hastigheten (twist)
+        # Uncertainty for the velocity (twist)
         odom.twist.covariance[0] = 0.01  # vx
         odom.twist.covariance[7] = 0.01  # vy
         odom.twist.covariance[14] = 0.01 # vz
@@ -237,7 +240,7 @@ class MecanumAllocator(Node):
         odom.twist.covariance[28] = 0.01 # pitch rate
         odom.twist.covariance[35] = 0.01 # yaw rate
 
-        # Publiser odometrien ut
+        # Publish the odometry message
         self.odom_publisher.publish(odom)
 
 def main(args=None):
