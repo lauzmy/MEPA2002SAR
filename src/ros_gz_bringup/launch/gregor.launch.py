@@ -41,6 +41,13 @@ def generate_launch_description():
         name='allocator_node',
         output='screen',
         parameters=[{'use_sim_time': False}]
+
+    )
+    laser_tf_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='laser_tf',
+        arguments=['0', '0', '0.2', '0', '0', '0', 'base_footprint', 'laser']
     )
 
     IMU_node = Node(
@@ -136,4 +143,5 @@ def generate_launch_description():
         ekf_node,
         slam,
         lidar_sweeper,
+        laser_tf_node,
     ])
