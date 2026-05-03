@@ -13,7 +13,7 @@ class MecanumAllocator(Node):
         super().__init__('mecanum_allocator')
 
         # Establish connection to UART
-        self.declare_parameter('serial_port', '/dev/ttyAMA1')
+        self.declare_parameter('serial_port', '/dev/ttyUSB0')
         self.declare_parameter('baud_rate', 115200)
         
         serial_port = self.get_parameter('serial_port').value
