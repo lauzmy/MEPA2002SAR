@@ -124,6 +124,24 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('slam'))
     )
 
+    # Finn stien til nav2_bringup
+    pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
+    
+    # Finn stien til Nav2 konfigurasjonsfilen
+    # OBS: Sørg for at filnavnet matcher din faktiske config-fil
+    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'nav2_params_protoma.yaml')
+
+    # Nav2 lanseringsbeskrivelse
+    nav2 = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')
+        ),
+        launch_arguments={
+            'use_sim_time': 'False',
+            'params_file': nav2_params_file
+        }.items()
+    )
+
     # 6. Din egendefinerte kode
     lidar_sweeper = Node(
         package='ros_gz_application',
@@ -162,6 +180,7 @@ def generate_launch_description():
         slam,
         lidar_sweeper,
         laser_tf_node,
+        nav2,
         ready_message
     ])
 
