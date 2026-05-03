@@ -15,12 +15,14 @@ services:
       MESA_GL_VERSION_OVERRIDE: "3.3"
       GZ_RENDER_ENGINE: ogre
       IGN_RENDER_ENGINE: ogre
+      FASTRTPS_DEFAULT_PROFILES_FILE: "/home/ubuntu/fastdds.xml"
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${HOME}/.Xauthority:/home/ubuntu/.Xauthority:ro
       - ${HOME}/ros2_ws:/home/ubuntu/ros2_ws
       - /dev:/dev
+      - ./fastdds.xml:/home/ubuntu/fastdds.xml:ro
 
     devices:
       - "/dev/i2c-1:/dev/i2c-1"
