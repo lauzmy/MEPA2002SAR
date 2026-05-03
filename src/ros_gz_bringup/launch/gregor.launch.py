@@ -36,6 +36,13 @@ def generate_launch_description():
         ]
     )
 
+        joint_state_publisher_node = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
+        parameters=[{'use_sim_time': False}]
+    )
+
     allocator_node = Node(
         package='ros_gz_application',
         executable='allocator',
@@ -147,6 +154,7 @@ def generate_launch_description():
         rviz_arg,
         slam_arg,
         robot_state_publisher,
+        joint_state_publisher_node,
         IMU_node,
         allocator_node,
         ldlidar_node,
