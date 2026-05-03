@@ -65,7 +65,7 @@ class MecanumAllocator(Node):
             crc ^= byte
             for _ in range(8):
                 if crc & 0x80:
-                    crc = (crc << 1) ^ 0x07
+                    crc = (crc << 1) ^ 0x31  # 0x31 matches MAXIM polynomial in ESP32
                 else:
                     crc <<= 1
                 crc &= 0xFF
