@@ -180,7 +180,6 @@ def generate_launch_description():
         slam,
         lidar_sweeper,
         laser_tf_node,
-        nav2,
         ready_message
     ])
 
