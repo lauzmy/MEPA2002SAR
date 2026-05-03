@@ -58,6 +58,19 @@ class BNO085Node(Node):
                 msg.linear_acceleration.y = accel[1]
                 msg.linear_acceleration.z = accel[2]
 
+            # Sett små covariances så EKF matrisen ikke kræsjer pga null
+            msg.orientation_covariance[0] = 0.01
+            msg.orientation_covariance[4] = 0.01
+            msg.orientation_covariance[8] = 0.01
+            
+            msg.angular_velocity_covariance[0] = 0.01
+            msg.angular_velocity_covariance[4] = 0.01
+            msg.angular_velocity_covariance[8] = 0.01
+            
+            msg.linear_acceleration_covariance[0] = 0.01
+            msg.linear_acceleration_covariance[4] = 0.01
+            msg.linear_acceleration_covariance[8] = 0.01
+
             self.publisher.publish(msg)
             
         except Exception as e:
