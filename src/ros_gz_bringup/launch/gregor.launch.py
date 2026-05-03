@@ -150,7 +150,6 @@ def generate_launch_description():
         IMU_node,
         allocator_node,
         ldlidar_node,
-        camera_node,
         ekf_node,
         slam,
         lidar_sweeper,
