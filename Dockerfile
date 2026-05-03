@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-usb-cam \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x rpi-lgpio
+RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x adafruit-extended-bus rpi-lgpio
 
 # Create a development user that matches the host UID/GID.
 RUN set -eux; \
