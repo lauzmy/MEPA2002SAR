@@ -14,7 +14,7 @@ class MecanumAllocator(Node):
 
         # Establish connection to UART
         self.declare_parameter('serial_port', '/dev/ttyUSB0')
-        self.declare_parameter('baud_rate', 115200)
+        self.declare_parameter('baud_rate', 921600)
         
         serial_port = self.get_parameter('serial_port').value
         baud_rate = self.get_parameter('baud_rate').value
