@@ -106,12 +106,12 @@ class MecanumAllocator(Node):
             pwm = min(255, max(0, pwm)) 
             return pwm, direction
 
-        pwm_M1, dir_M1 = formater_motor_signal(v_M1)
-        pwm_M2, dir_M2 = formater_motor_signal(v_M2)
-        pwm_M3, dir_M3 = formater_motor_signal(v_M3)
-        pwm_M4, dir_M4 = formater_motor_signal(v_M4)
+        pwm_M1, self.dir_M1 = formater_motor_signal(v_M1)
+        pwm_M2, self.dir_M2 = formater_motor_signal(v_M2)
+        pwm_M3, self.dir_M3 = formater_motor_signal(v_M3)
+        pwm_M4, self.dir_M4 = formater_motor_signal(v_M4)
 
-        dir_byte = (dir_M4 << 3) | (dir_M3 << 2) | (dir_M2 << 1) | dir_M1
+        dir_byte = (self.dir_M4 << 3) | (self.dir_M3 << 2) | (self.dir_M2 << 1) | self.dir_M1
 
         start_byte = 0x55
         cmd_byte = 0x01
@@ -162,10 +162,10 @@ class MecanumAllocator(Node):
                 ly = self.get_parameter('ly').value
                 L = lx + ly
                 
-                dir_M1 = -1 if dir_M1 == 0 else 1
-                dir_M2 = -1 if dir_M2 == 0 else 1
-                dir_M3 = -1 if dir_M3 == 0 else 1
-                dir_M4 = -1 if dir_M4 == 0 else 1
+                dir_M1 = -1 if self.dir_M1 == 0 else 1
+                dir_M2 = -1 if self.dir_M2 == 0 else 1
+                dir_M3 = -1 if self.dir_M3 == 0 else 1
+                dir_M4 = -1 if self.dir_M4 == 0 else 1
 
                 # Converting bytes to real RPM. Sørg for at høyre side/venstre side 
                 # korrigeres for speiling her hvis ESP32 ikke allerede gjør fartsvektor-speiling for RPM. 
