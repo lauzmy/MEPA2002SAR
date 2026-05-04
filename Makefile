@@ -19,7 +19,8 @@ down:
 	docker compose down
 
 shell:
-	docker compose exec -u ubuntu -e DISPLAY=$${DISPLAY:-:0} ros2 bash -c "sudo chmod a+rw /dev/i2c-1 && bash"
+	sudo chmod a+rw /dev/i2c-1
+	docker compose exec -u ubuntu -e DISPLAY=$${DISPLAY:-:0} ros2 bash
 
 logs:
 	docker compose logs -f --tail=200 ros2
