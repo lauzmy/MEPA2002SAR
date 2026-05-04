@@ -47,7 +47,7 @@ controller_server:
       min_vel_y: -0.5   # Mecanum can strafe
       max_vel_x: 0.5
       max_vel_y: 0.5
-      max_vel_theta: 2.0
+      max_vel_theta: 1.5
       min_speed_xy: 0.0
       max_speed_xy: 0.5
       min_speed_theta: 0.0
@@ -116,10 +116,10 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 8.0
+        cost_scaling_factor: 3.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.4
+        inflation_radius: 0.7
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -147,7 +147,7 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      update_frequency: 10.0
+      update_frequency: 5.0
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_footprint
@@ -177,10 +177,10 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 4.0
+        cost_scaling_factor: 3.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.4
+        inflation_radius: 0.7
       always_send_full_costmap: True
 
 map_server:
