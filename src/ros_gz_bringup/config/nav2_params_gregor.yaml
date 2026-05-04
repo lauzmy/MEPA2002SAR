@@ -77,13 +77,13 @@ controller_server:
 
       # Trajectory critics (scoring functions)
       # Higher scale = more weight on that criterion
-      critics: ["RotateToGoal", "ObstacleFootprint", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # ObstacleFootprint: Better than BaseObstacle - checks full robot footprint
       # Scale must be HIGH to reject trajectories near obstacles
       ObstacleFootprint.scale: 32.0
       ObstacleFootprint.sum_scores: false
       # PathAlign: Align robot heading with path direction
-      PathAlign.scale: 10.0
+      PathAlign.scale: 24.0
       PathAlign.forward_point_distance: 0.5
       # GoalAlign: Align heading toward goal
       GoalAlign.scale: 20.0
@@ -91,8 +91,8 @@ controller_server:
       # PathDist: Stay close to the global path
       PathDist.scale: 24.0
       # GoalDist: Move toward goal
-      GoalDist.scale: 24.0
-      RotateToGoal.scale: 10.0
+      GoalDist.scale: 20.0
+      RotateToGoal.scale: 32.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 
@@ -268,7 +268,7 @@ velocity_smoother:
     scale_velocities: False
     feedback: "OPEN_LOOP"
     max_velocity: [0.5, 0.5, 2.0]  # [vx, vy, vtheta] in m/s
-    min_velocity: [-0.4, -0.5, -2.0]
+    min_velocity: [-0.5, -0.5, -2.0]
     max_accel: [1.5, 1.5, 3.0]
     max_decel: [-1.5, -1.5, -3.0]
     odom_topic: "/odometry/filtered"
