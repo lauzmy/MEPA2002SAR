@@ -77,7 +77,7 @@ controller_server:
 
       # Trajectory critics (scoring functions)
       # Higher scale = more weight on that criterion
-      critics: ["RotateToGoal", "Oscillation", "ObstacleFootprint", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToGoal", "ObstacleFootprint", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # ObstacleFootprint: Better than BaseObstacle - checks full robot footprint
       # Scale must be HIGH to reject trajectories near obstacles
       ObstacleFootprint.scale: 32.0
@@ -92,7 +92,7 @@ controller_server:
       PathDist.scale: 24.0
       # GoalDist: Move toward goal
       GoalDist.scale: 24.0
-      RotateToGoal.scale: 15.0
+      RotateToGoal.scale: 10.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 
