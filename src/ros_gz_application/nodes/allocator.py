@@ -154,16 +154,29 @@ class MecanumAllocator(Node):
                 
                 # Siden RPM og respons-retningen må hentes ut, antar vi at 'STATUS' bruker 
                 # de 4 laveste bitene til retning, på samme måte som 'DIRS' da vi sendte:
-                dir_M1 = 1 if (status_byte & 0x01) else -1
-                dir_M2 = 1 if (status_byte & 0x02) else -1
-                dir_M3 = 1 if (status_byte & 0x04) else -1
-                dir_M4 = 1 if (status_byte & 0x08) else -1
+                lx = self.get_parameter('lx').value
+                ly = self.get_parameter('ly').value
+                L = lx + ly
+                
+                # Vi gjenskaper de forventede hastighetene vi sendte:
+                esp_v_M1 = self.target_vx - self.target_vy - (L * self.target_wz)
+                esp_v_M2 = self.target_vx + self.target_vy + (L * self.target_wz)
+                esp_v_M3 = self.target_vx + self.target_vy - (L * self.target_wz)
+                esp_v_M4 = self.target_vx - self.target_vy + (L * self.target_wz)
+                
+                # Hvis hjulet *skulle* rygge, antar vi at det rygger
+                dir_M1 = 1 if esp_v_M1 >= 0 else -1
+                dir_M2 = 1 if esp_v_M2 >= 0 else -1
+                dir_M3 = 1 if esp_v_M3 >= 0 else -1
+                dir_M4 = 1 if esp_v_M4 >= 0 else -1
 
-                # Converting bytes to real RPM
+                # Converting bytes to real RPM. Sørg for at høyre side/venstre side 
+                # korrigeres for speiling her hvis ESP32 ikke allerede gjør fartsvektor-speiling for RPM. 
+                # Ofte er høyre motorer (M2 og M4 eller M1 og M3 avhengig av nummerering) speilet:
                 rpm_M1 = rpm1_byte * dir_M1
-                rpm_M2 = rpm2_byte * dir_M2
-                rpm_M3 = rpm3_byte * dir_M3
-                rpm_M4 = rpm4_byte * dir_M4
+                rpm_M2 = rpm2_byte * dir_M2 * -1 # Legg inn en * -1 her dersom dette hjulet står opp/ned mot M1
+                rpm_M3 = rpm3_byte * dir_M3 
+                rpm_M4 = rpm4_byte * dir_M4 * -1 # Legg inn en * -1 her dersom hjulet står opp/ned
 
                 self.calculate_and_publish_odom(rpm_M1, rpm_M2, rpm_M3, rpm_M4)
             else:
