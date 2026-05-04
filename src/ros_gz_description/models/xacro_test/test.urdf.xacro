@@ -287,11 +287,11 @@
   <!-- SENSOR LINK (Forskyvningen på 32mm over vippepunktet) -->
   <joint name="lidar_sensor_joint" type="fixed">
     <parent link="lidar_hinge_link"/>
-    <child link="lidar_link"/>
+    <child link="laser"/>
     <origin xyz="0 0 0.032" rpy="0 0 0"/> <!-- 32 mm opp (Z-aksen) -->
   </joint>
 
-  <link name="lidar_link">
+  <link name="laser">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -313,14 +313,14 @@
     </inertial>
   </link>
 
-  <!-- Gazebo sensor on lidar_link -->
-  <gazebo reference="lidar_link">
+  <!-- Gazebo sensor on laser -->
+  <gazebo reference="laser">
     <sensor name="lidar" type="gpu_lidar">
       <always_on>true</always_on>
       <update_rate>10</update_rate>
       <visualize>true</visualize>
       <topic>/scan</topic>
-      <gz_frame_id>lidar_link</gz_frame_id>
+      <gz_frame_id>laser</gz_frame_id>
       <lidar>
         <scan>
           <horizontal>

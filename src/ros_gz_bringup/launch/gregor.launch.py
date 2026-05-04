@@ -52,12 +52,6 @@ def generate_launch_description():
         parameters=[{'use_sim_time': False}]
 
     )
-    laser_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='laser_tf',
-        arguments=['0', '0', '0.2', '0', '0', '0', 'base_footprint', 'laser']
-    )
 
     IMU_node = Node(
         package='ros_gz_application',
@@ -77,7 +71,7 @@ def generate_launch_description():
         parameters=[
             {'serial_port': '/dev/ttyAMA0'},  # Bytt ut basert på porten til Pi-en
             {'topic_name': '/test_robot/scan'}, # Leser samme topic som simuleringen
-            {'frame_id': 'lidar_link'},       # Navnet på linken i din xacro
+            {'frame_id': 'laser'},       # Navnet på linken i din xacro
             {'lidar_type': 'LD06'}
         ]
     )
@@ -183,7 +177,6 @@ def generate_launch_description():
         slam,
         nav2,
         lidar_sweeper,
-        laser_tf_node,
         ready_message
     ])
 
