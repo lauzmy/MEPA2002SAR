@@ -13,19 +13,19 @@ ekf_filter_node:
 
     # Wheel Odometry (from Gazebo MecanumDrive)
     odom0: /gregor/odometry
-    odom0_config: [false, false, false,
-                   false, false, false,
-                   true,  true,  true,
-                   false, false, false,
-                   false, false, false]
+    odom0_config: [false, false, false,  # X, Y, Z - Absolutt posisjon i meter
+                   false, false, false,  # Roll, Pitch, Yaw - Absolutt kompassvinkel
+                   true,  true,  false,  # Vx, Vy, Vz - Hastighet forover/bakover og sidelengs i m/s
+                   false, false, false,  # Vroll, Vpitch, Vyaw - Rotasjonshastighet
+                   false, false, false]  # Ax, Ay, Az - Lineær akselerasjon
     odom0_differential: false
 
-    # IMU Data
+    # IMU Data (BNO085)
     imu0: /imu/data
-    imu0_config: [false, false, false,
-                  false, false, false,
-                  false, false, false,
-                  false, false, true,
-                  false,  false,  false]
+    imu0_config: [false, false, false,   # X, Y, Z - Absolutt posisjon (IMU har uansett ikke dette)
+                  false, false, false,   # Roll, Pitch, Yaw - Absolutt basert på kompass (slått AV pga støy!)
+                  false, false, false,   # Vx, Vy, Vz - Hastighet (IMU har ikke dette)
+                  false, false, true,    # Vroll, Vpitch, Vyaw - Gyroskopets rotasjonshastighet (PÅ!)
+                  false, false, false]   # Ax, Ay, Az - Akselerometerets lineære akselerasjon
     imu0_differential: false
     imu0_relative: true
