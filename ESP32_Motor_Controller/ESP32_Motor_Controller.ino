@@ -1,7 +1,7 @@
 /*
- * ESP32 Motor Controller v2
+ * ESP32 Motor Controller
  *
- * Simplified single-loop architecture — no FreeRTOS tasks, no mutexes.
+ * Single-loop architecture.
  * ISRs write volatile period data; loop() reads, filters, and dispatches.
  *
  * Protocol (8 bytes, unchanged from v1):
