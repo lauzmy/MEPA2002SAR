@@ -162,29 +162,18 @@ class MecanumAllocator(Node):
                 ly = self.get_parameter('ly').value
                 L = lx + ly
                 
-                # Recreating the expected velocities we sent:
-                # M4 Front-Left
-                esp_v_M4 = self.target_vx - self.target_vy - (L * self.target_wz)
-                # M3 Front-Right
-                esp_v_M3 = self.target_vx + self.target_vy + (L * self.target_wz)
-                # M2 Rear-Left
-                esp_v_M2 = self.target_vx + self.target_vy - (L * self.target_wz)
-                # M1 Rear-Right
-                esp_v_M1 = self.target_vx - self.target_vy + (L * self.target_wz)
-                
-                # Hvis hjulet *skulle* rygge, antar vi at det rygger
-                dir_M1 = 1 if esp_v_M1 >= 0 else -1
-                dir_M2 = 1 if esp_v_M2 >= 0 else -1
-                dir_M3 = 1 if esp_v_M3 >= 0 else -1
-                dir_M4 = 1 if esp_v_M4 >= 0 else -1
+                dir_M1 = -1 if dir_M1 == 0 else 1
+                dir_M2 = -1 if dir_M2 == 0 else 1
+                dir_M3 = -1 if dir_M3 == 0 else 1
+                dir_M4 = -1 if dir_M4 == 0 else 1
 
                 # Converting bytes to real RPM. Sørg for at høyre side/venstre side 
                 # korrigeres for speiling her hvis ESP32 ikke allerede gjør fartsvektor-speiling for RPM. 
                 # Ofte er høyre motorer (M2 og M4 eller M1 og M3 avhengig av nummerering) speilet:
                 rpm_M1 = rpm1_byte * dir_M1
-                rpm_M2 = rpm2_byte * dir_M2 * -1 # Legg inn en * -1 her dersom dette hjulet står opp/ned mot M1
+                rpm_M2 = rpm2_byte * dir_M2
                 rpm_M3 = rpm3_byte * dir_M3 
-                rpm_M4 = rpm4_byte * dir_M4 * -1 # Legg inn en * -1 her dersom hjulet står opp/ned
+                rpm_M4 = rpm4_byte * dir_M4
 
                 self.calculate_and_publish_odom(rpm_M1, rpm_M2, rpm_M3, rpm_M4)
             else:
