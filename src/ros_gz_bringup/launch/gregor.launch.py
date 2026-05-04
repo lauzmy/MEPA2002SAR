@@ -23,6 +23,7 @@ def generate_launch_description():
     # 2. Argumenter du kan bruke i terminalen (f.eks "ros2 launch ros_gz_bringup gregor.launch.py rviz:=false")
     rviz_arg = DeclareLaunchArgument('rviz', default_value='true', description='Open RViz')
     slam_arg = DeclareLaunchArgument('slam', default_value='true', description='Run SLAM')
+    nav2_arg = DeclareLaunchArgument('nav2', default_value='true', description='Run Nav2')
     
     # 3. TF Tree publisering
     robot_state_publisher = Node(
@@ -139,7 +140,8 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': 'False',
             'params_file': nav2_params_file
-        }.items()
+        }.items(),
+        condition=IfCondition(LaunchConfiguration('nav2'))
     )
 
     # 6. Din egendefinerte kode
@@ -171,6 +173,7 @@ def generate_launch_description():
     return LaunchDescription([
         rviz_arg,
         slam_arg,
+        nav2_arg,
         robot_state_publisher,
         joint_state_publisher_node,
         IMU_node,
@@ -178,6 +181,7 @@ def generate_launch_description():
         ldlidar_node,
         ekf_node,
         slam,
+        nav2,
         lidar_sweeper,
         laser_tf_node,
         ready_message

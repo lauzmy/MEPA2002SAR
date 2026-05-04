@@ -127,9 +127,6 @@ class MecanumAllocator(Node):
 
         # Happens continuously X times per second via write_timer, 
         # even if cmd_vel_callback has been called or not.
-        if self.target_vx != 0.0 or self.target_vy != 0.0 or self.target_wz != 0.0:
-            self.get_logger().info(f'Sending M1:{pwm_M1}, M2:{pwm_M2}, M3:{pwm_M3}, M4:{pwm_M4}, Dir:{dir_byte:04b}')
-
         self.ser.write(bytearray(payload))
 
 
