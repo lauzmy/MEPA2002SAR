@@ -155,24 +155,16 @@ class MecanumAllocator(Node):
                 crc_byte    = payload[6]
 
                 # (Valgfritt) verifiser CRC: self.calculate_crc8(bytearray([0x55]) + payload[:-1]) == crc_byte
-                
-                # Siden RPM og respons-retningen må hentes ut, antar vi at 'STATUS' bruker 
-                # de 4 laveste bitene til retning, på samme måte som 'DIRS' da vi sendte:
-                lx = self.get_parameter('lx').value
-                ly = self.get_parameter('ly').value
-                L = lx + ly
-                
+
+                # Use the last commanded direction since ESP32 doesn't report direction in response
                 dir_M1 = -1 if self.dir_M1 == 0 else 1
                 dir_M2 = -1 if self.dir_M2 == 0 else 1
                 dir_M3 = -1 if self.dir_M3 == 0 else 1
                 dir_M4 = -1 if self.dir_M4 == 0 else 1
 
-                # Converting bytes to real RPM. Sørg for at høyre side/venstre side 
-                # korrigeres for speiling her hvis ESP32 ikke allerede gjør fartsvektor-speiling for RPM. 
-                # Ofte er høyre motorer (M2 og M4 eller M1 og M3 avhengig av nummerering) speilet:
                 rpm_M1 = rpm1_byte * dir_M1
                 rpm_M2 = rpm2_byte * dir_M2
-                rpm_M3 = rpm3_byte * dir_M3 
+                rpm_M3 = rpm3_byte * dir_M3
                 rpm_M4 = rpm4_byte * dir_M4
 
                 self.calculate_and_publish_odom(rpm_M1, rpm_M2, rpm_M3, rpm_M4)
