@@ -90,10 +90,14 @@ class MecanumAllocator(Node):
         L = lx + ly
 
         # Calculate kinematic velocities for each wheel in m/s with saved target_vx, target_vy and target_wz
-        v_M1 = self.target_vx - self.target_vy - (L * self.target_wz)
-        v_M2 = self.target_vx + self.target_vy + (L * self.target_wz)
-        v_M3 = self.target_vx + self.target_vy - (L * self.target_wz)
-        v_M4 = self.target_vx - self.target_vy + (L * self.target_wz)
+        # M4 Front-Left
+        v_M4 = self.target_vx - self.target_vy - (L * self.target_wz)
+        # M3 Front-Right
+        v_M3 = self.target_vx + self.target_vy + (L * self.target_wz)
+        # M2 Rear-Left
+        v_M2 = self.target_vx + self.target_vy - (L * self.target_wz)
+        # M1 Rear-Right
+        v_M1 = self.target_vx - self.target_vy + (L * self.target_wz)
 
         def formater_motor_signal(hastighet_ms):
             direction = 1 if hastighet_ms >= 0 else 0
@@ -158,11 +162,15 @@ class MecanumAllocator(Node):
                 ly = self.get_parameter('ly').value
                 L = lx + ly
                 
-                # Vi gjenskaper de forventede hastighetene vi sendte:
-                esp_v_M1 = self.target_vx - self.target_vy - (L * self.target_wz)
-                esp_v_M2 = self.target_vx + self.target_vy + (L * self.target_wz)
-                esp_v_M3 = self.target_vx + self.target_vy - (L * self.target_wz)
-                esp_v_M4 = self.target_vx - self.target_vy + (L * self.target_wz)
+                # Recreating the expected velocities we sent:
+                # M4 Front-Left
+                esp_v_M4 = self.target_vx - self.target_vy - (L * self.target_wz)
+                # M3 Front-Right
+                esp_v_M3 = self.target_vx + self.target_vy + (L * self.target_wz)
+                # M2 Rear-Left
+                esp_v_M2 = self.target_vx + self.target_vy - (L * self.target_wz)
+                # M1 Rear-Right
+                esp_v_M1 = self.target_vx - self.target_vy + (L * self.target_wz)
                 
                 # Hvis hjulet *skulle* rygge, antar vi at det rygger
                 dir_M1 = 1 if esp_v_M1 >= 0 else -1
@@ -199,9 +207,10 @@ class MecanumAllocator(Node):
         v4 = rpm_to_ms(rpm4)
 
         # Forward kinematics (convert wheel velocities to robot velocities in Vx, Vy and angular velocity Wz)
-        vx = (v1 + v2 + v3 + v4) / 4.0
-        vy = (-v1 + v2 + v3 - v4) / 4.0
-        wz = (-v1 + v2 - v3 + v4) / (4.0 * L)
+        # v4=FL, v3=FR, v2=RL, v1=RR
+        vx = (v4 + v3 + v2 + v1) / 4.0
+        vy = (-v4 + v3 + v2 - v1) / 4.0
+        wz = (-v4 + v3 - v2 + v1) / (4.0 * L)
 
         # 3. Odometrey integration: Calculate how much we have moved since last time
         current_time = self.get_clock().now()
