@@ -91,13 +91,13 @@ class MecanumAllocator(Node):
 
         # Calculate kinematic velocities for each wheel in m/s with saved target_vx, target_vy and target_wz
         # M4 Front-Left
-        v_M4 = self.target_vx - self.target_vy - (L * self.target_wz)
+        v_M4 = self.target_vx + self.target_vy + (L * self.target_wz)
         # M3 Front-Right
-        v_M3 = self.target_vx + self.target_vy + (L * self.target_wz)
+        v_M3 = self.target_vx - self.target_vy - (L * self.target_wz)
         # M2 Rear-Left
-        v_M2 = self.target_vx + self.target_vy - (L * self.target_wz)
+        v_M2 = self.target_vx + self.target_vy + (L * self.target_wz)
         # M1 Rear-Right
-        v_M1 = self.target_vx - self.target_vy + (L * self.target_wz)
+        v_M1 = self.target_vx - self.target_vy - (L * self.target_wz)
 
         def formater_motor_signal(hastighet_ms):
             direction = 1 if hastighet_ms >= 0 else 0
