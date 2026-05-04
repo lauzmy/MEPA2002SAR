@@ -6,7 +6,7 @@ bt_navigator:
     use_sim_time: False
     global_frame: map
     robot_base_frame: base_footprint
-    odom_topic: /test_robot/odometry
+    odom_topic: /odometry/filtered
     bt_loop_duration: 10
     default_server_timeout: 20
 
@@ -271,7 +271,7 @@ velocity_smoother:
     min_velocity: [-0.5, -0.5, -2.0]
     max_accel: [1.5, 1.5, 3.0]
     max_decel: [-1.5, -1.5, -3.0]
-    odom_topic: "/test_robot/odometry"
+    odom_topic: "/odometry/filtered"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
@@ -282,7 +282,7 @@ collision_monitor:
     base_frame_id: "base_footprint"
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
-    cmd_vel_out_topic: "/test_robot/cmd_vel"
+    cmd_vel_out_topic: "/cmd_vel"
     transform_tolerance: 0.2
     source_timeout: 1.0
     stop_pub_timeout: 2.0
