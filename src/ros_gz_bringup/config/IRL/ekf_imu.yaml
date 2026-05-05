@@ -28,4 +28,4 @@ ekf_filter_node:
                   false, false, true,    # Vroll, Vpitch, Vyaw - Gyroskopets rotasjonshastighet (PÅ!)
                   false, false, false]   # Ax, Ay, Az - Akselerometerets lineære akselerasjon
     imu0_differential: false
-    imu0_relative: true
+    imu0_relative: false
