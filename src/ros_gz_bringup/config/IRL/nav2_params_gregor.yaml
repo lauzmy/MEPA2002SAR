@@ -20,7 +20,7 @@ controller_server:
     controller_frequency: 12.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.01
-    min_theta_velocity_threshold: 0.03
+    min_theta_velocity_threshold: 0.00
     failure_tolerance: 0.3
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
@@ -47,10 +47,10 @@ controller_server:
       min_vel_y: -0.40  # Keep strafe available but limited for straighter tracking
       max_vel_x: 0.5
       max_vel_y: 0.40
-      max_vel_theta: 1.0
+      max_vel_theta: 1.5
       min_speed_xy: 0.0
       max_speed_xy: 0.5
-      min_speed_theta: 0.05
+      min_speed_theta: 0.00
 
       # Acceleration limits
       acc_lim_x: 1.5
@@ -92,8 +92,8 @@ controller_server:
       PathDist.scale: 24.0
       # GoalDist: Move toward goal
       GoalDist.scale: 24.0
-      RotateToGoal.scale: 16.0
-      RotateToGoal.slowing_factor: 6.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 4.0
       RotateToGoal.lookahead_time: -1.0
       PreferForward.scale: 8.0
 
