@@ -189,9 +189,14 @@ class MecanumAllocator(Node):
 
         # Forward kinematics (convert wheel velocities to robot velocities in Vx, Vy and angular velocity Wz)
         # v4=FL, v3=FR, v2=RL, v1=RR
+        # Derived as the pseudo-inverse of the IK matrix used in send_serial_data:
+        #   FL = vx - vy + L*wz
+        #   FR = vx + vy - L*wz
+        #   RL = vx - vy - L*wz
+        #   RR = vx + vy + L*wz
         vx = (v4 + v3 + v2 + v1) / 4.0
-        vy = (-v4 + v3 + v2 - v1) / 4.0
-        wz = (-v4 + v3 - v2 + v1) / (4.0 * L)
+        vy = (-v4 + v3 - v2 + v1) / 4.0
+        wz = (v4 - v3 - v2 + v1) / (4.0 * L)
 
         # 3. Odometrey integration: Calculate how much we have moved since last time
         current_time = self.get_clock().now()
