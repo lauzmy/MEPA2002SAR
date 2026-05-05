@@ -17,7 +17,7 @@ ekf_filter_node:
                    false, false, false,  # Roll, Pitch, Yaw - Absolutt kompassvinkel
                    true,  true,  false,  # Vx, Vy, Vz - Hastighet forover/bakover og sidelengs i m/s
                    false, false, true,  # Vroll, Vpitch, Vyaw - Rotasjonshastighet
-                   true,  true, false]  # Ax, Ay, Az - Lineær akselerasjon
+                   false,  false, false]  # Ax, Ay, Az - Lineær akselerasjon
     odom0_differential: false
 
     # IMU Data (BNO085)
