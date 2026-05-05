@@ -1,64 +1,169 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import Float64
+"""Tilt-servo controller for the LD06 2D-LiDAR.
+
+Sweeps the lidar pitch with a *triangle* wave so the angular velocity is
+constant.  The period is locked to an integer number of full LD06 scans
+(10 Hz) so every sweep contains exactly the same set of scan stamps.
+
+The instantaneous tilt angle is a deterministic function of ROS time:
+
+    alpha(t) = triangle( (t - t0) / period ) * amplitude
+
+Because both this node and the assembler use the same equation, no
+message synchronisation between them is needed - the assembler can ask
+"what was the tilt at the timestamp of this beam?" without any TF/topic
+look-up.
+
+The same angle is also published as a JointState (for robot_state_publisher
+and RViz) and as a Float64 on /lidar_cmd_pos (used by the Gazebo bridge in
+simulation).
+"""
+
 import math
 import time
 
+import rclpy
+from rclpy.node import Node
+
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Float64
+
+
+def triangle_angle(t: float, period: float, amplitude: float) -> tuple[float, float]:
+    """Return (angle [rad], angular_velocity [rad/s]) at time ``t``.
+
+    A symmetric triangle wave of full period ``period`` and peak ``amplitude``,
+    starting at ``-amplitude`` for ``t = 0`` and rising linearly.
+    """
+    if period <= 0.0:
+        return 0.0, 0.0
+    phase = (t % period) / period  # in [0, 1)
+    if phase < 0.5:
+        # rising:  -A  ->  +A
+        angle = amplitude * (4.0 * phase - 1.0)
+        ang_vel = 4.0 * amplitude / period
+    else:
+        # falling: +A  ->  -A
+        angle = amplitude * (3.0 - 4.0 * phase)
+        ang_vel = -4.0 * amplitude / period
+    return angle, ang_vel
+
+
 class LidarSweeper(Node):
-    # Servo calibration
-    PWM_CENTER = 7.2  # Center position duty cycle
-    PWM_RANGE  = 2.5  # Duty cycle range per 90 degrees
+    # --- Servo PWM calibration (50 Hz signal) ------------------------------
+    PWM_CENTER = 7.2          # duty cycle (%) at neutral
+    PWM_RANGE_PER_90DEG = 2.5  # duty cycle delta per 90 deg
 
     def __init__(self):
         super().__init__('lidar_sweeper')
 
-        self.declare_parameter('sim', True)
-        self.declare_parameter('amplitude', math.radians(30))  # radians (~30 deg)
-        self.declare_parameter('speed', 2.0)        # rad/s
+        # ----- Parameters --------------------------------------------------
+        self.declare_parameter('sim', False)
+        self.declare_parameter('amplitude_deg', 30.0)
+        # The LD06 publishes scans at 10 Hz.  One full sweep period
+        # (down AND back up) is locked to ``scans_per_sweep`` scans, so
+        # each half-sweep contains exactly ``scans_per_sweep / 2`` scans
+        # at evenly spaced tilt angles.
+        self.declare_parameter('lidar_scan_rate_hz', 10.0)
+        self.declare_parameter('scans_per_sweep', 20)
+        self.declare_parameter('joint_name', 'lidar_joint')
+        # Topic merged into /joint_states by joint_state_publisher source_list
+        self.declare_parameter('joint_state_topic', '/lidar_joint_states')
+        # Servo command topic (used by the Gazebo bridge in sim)
+        self.declare_parameter('cmd_topic', '/lidar_cmd_pos')
+        self.declare_parameter('control_rate_hz', 100.0)
+        self.declare_parameter('min_angle_deg', -45.0)
+        self.declare_parameter('max_angle_deg', 45.0)
 
-        self.sim       = self.get_parameter('sim').value
-        self.amplitude = self.get_parameter('amplitude').value
-        self.speed     = self.get_parameter('speed').value
+        self.sim = bool(self.get_parameter('sim').value)
+        self.amplitude = math.radians(float(self.get_parameter('amplitude_deg').value))
+        scan_rate = float(self.get_parameter('lidar_scan_rate_hz').value)
+        scans_per_sweep = int(self.get_parameter('scans_per_sweep').value)
+        self.period = scans_per_sweep / scan_rate  # seconds, full triangle period
+        self.joint_name = str(self.get_parameter('joint_name').value)
+        self.cmd_topic = str(self.get_parameter('cmd_topic').value)
+        joint_state_topic = str(self.get_parameter('joint_state_topic').value)
+        ctrl_rate = float(self.get_parameter('control_rate_hz').value)
+        self.angle_min = math.radians(float(self.get_parameter('min_angle_deg').value))
+        self.angle_max = math.radians(float(self.get_parameter('max_angle_deg').value))
 
-        # Publisher: picked up by ros_gz_bridge in sim, or used for logging in hw mode
-        self.publisher_ = self.create_publisher(Float64, '/lidar_cmd_pos', 10)
+        # ----- Publishers --------------------------------------------------
+        self.cmd_pub = self.create_publisher(Float64, self.cmd_topic, 10)
+        self.js_pub = self.create_publisher(JointState, joint_state_topic, 10)
 
+        # ----- Hardware PWM (real robot only) ------------------------------
+        self.pwm = None
         if not self.sim:
-            from rpi_hardware_pwm import HardwarePWM
-            self.pwm = HardwarePWM(pwm_channel=0, hz=50, chip=0)
-            self.pwm.start(0)
-            self.pwm.change_duty_cycle(self.PWM_CENTER)
-            time.sleep(0.5)
-            self.get_logger().info('Hardware PWM initialised (channel 0, 50 Hz)')
+            try:
+                from rpi_hardware_pwm import HardwarePWM
+                self.pwm = HardwarePWM(pwm_channel=0, hz=50, chip=0)
+                self.pwm.start(0)
+                self.pwm.change_duty_cycle(self.PWM_CENTER)
+                time.sleep(0.5)
+                self.get_logger().info('Hardware PWM initialised (channel 0, 50 Hz)')
+            except Exception as e:  # noqa: BLE001
+                self.get_logger().error(
+                    f'Could not init hardware PWM ({e}); running in command-only mode.'
+                )
+                self.pwm = None
         else:
-            self.pwm = None
-            self.get_logger().info('Running in simulation mode — PWM disabled')
+            self.get_logger().info('Running in simulation mode - PWM disabled')
 
-        self.start_time = time.time()
-        self.timer = self.create_timer(0.05, self.timer_callback)  # 20 Hz
+        # ----- Sweep epoch -------------------------------------------------
+        # Phase 0 == angle = -amplitude (start of an upward half-sweep).
+        # The assembler does NOT need to know this t0 because it evaluates
+        # triangle(t) modulo the period.
+        self.t0 = self.get_clock().now()
 
-    def timer_callback(self):
-        current_time = time.time() - self.start_time
-        angle_rad = self.amplitude * math.sin(self.speed * current_time)
+        self.get_logger().info(
+            f'Sweep: ±{math.degrees(self.amplitude):.1f}°, '
+            f'period={self.period:.3f}s '
+            f'({scans_per_sweep} scans @ {scan_rate:g} Hz, '
+            f'half-sweep = {self.period/2:.3f}s).'
+        )
 
-        # Publish position for Gazebo / logging
-        msg = Float64()
-        msg.data = angle_rad
-        self.publisher_.publish(msg)
+        self.timer = self.create_timer(1.0 / ctrl_rate, self.tick)
 
-        # Drive physical servo when not in sim mode
+    # ------------------------------------------------------------------
+    def _t_now(self) -> float:
+        return (self.get_clock().now() - self.t0).nanoseconds * 1e-9
+
+    def tick(self):
+        t = self._t_now()
+        angle, _vel = triangle_angle(t, self.period, self.amplitude)
+        # Hard clamp (in case parameters are misconfigured)
+        if angle < self.angle_min:
+            angle = self.angle_min
+        elif angle > self.angle_max:
+            angle = self.angle_max
+
+        stamp = self.get_clock().now().to_msg()
+
+        # 1) Command for Gazebo bridge / logging
+        self.cmd_pub.publish(Float64(data=angle))
+
+        # 2) JointState for TF (robot_state_publisher)
+        js = JointState()
+        js.header.stamp = stamp
+        js.name = [self.joint_name]
+        js.position = [angle]
+        self.js_pub.publish(js)
+
+        # 3) Drive the servo
         if self.pwm is not None:
-            angle_deg  = math.degrees(angle_rad)
-            duty_cycle = self.PWM_CENTER + (angle_deg * self.PWM_RANGE / 90.0)
-            self.pwm.change_duty_cycle(duty_cycle)
+            duty = self.PWM_CENTER + math.degrees(angle) * self.PWM_RANGE_PER_90DEG / 90.0
+            self.pwm.change_duty_cycle(duty)
 
+    # ------------------------------------------------------------------
     def destroy_node(self):
         if self.pwm is not None:
-            self.get_logger().info('Centering servo and stopping PWM')
-            self.pwm.change_duty_cycle(self.PWM_CENTER)
-            time.sleep(0.5)
-            self.pwm.stop()
+            try:
+                self.get_logger().info('Centering servo and stopping PWM')
+                self.pwm.change_duty_cycle(self.PWM_CENTER)
+                time.sleep(0.5)
+                self.pwm.stop()
+            except Exception:  # noqa: BLE001
+                pass
         super().destroy_node()
 
 
@@ -72,6 +177,7 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
