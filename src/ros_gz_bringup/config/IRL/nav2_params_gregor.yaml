@@ -17,10 +17,10 @@ bt_navigator:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 15.0
+    controller_frequency: 12.0
     min_x_velocity_threshold: 0.001
-    min_y_velocity_threshold: 0.05
-    min_theta_velocity_threshold: 0.05
+    min_y_velocity_threshold: 0.03
+    min_theta_velocity_threshold: 0.03
     failure_tolerance: 0.3
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
@@ -36,31 +36,66 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.12
-      yaw_goal_tolerance: 0.08
+      xy_goal_tolerance: 0.15  # 15cm position tolerance
+      yaw_goal_tolerance: 0.10  # ~6 degrees rotation tolerance
 
-    # Regulated Pure Pursuit tuned for: rotate-to-heading, then straight tracking
+    # DWB parameters for mecanum drive
     FollowPath:
-      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.35
-      min_approach_linear_velocity: 0.08
-      lookahead_dist: 0.45
-      min_lookahead_dist: 0.30
-      max_lookahead_dist: 0.70
-      lookahead_time: 1.0
-      use_velocity_scaled_lookahead_dist: true
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: True
+      min_vel_x: -0.2
+      min_vel_y: -0.10  # Keep strafe available but limited for straighter tracking
+      max_vel_x: 0.5
+      max_vel_y: 0.10
+      max_vel_theta: 1.0
+      min_speed_xy: 0.0
+      max_speed_xy: 0.5
+      min_speed_theta: 0.05
+
+      # Acceleration limits
+      acc_lim_x: 1.5
+      acc_lim_y: 1.5
+      acc_lim_theta: 3.0
+      decel_lim_x: -1.5
+      decel_lim_y: -1.5
+      decel_lim_theta: -3.0
+
+      # Path/goal tolerances
+      vx_samples: 20
+      vy_samples: 5  # Keep some lateral options, reduce wobble
+      vtheta_samples: 24
+      # sim_time: How far ahead (seconds) to simulate trajectories
+      # Balance: too short = cuts corners, too long = gets stuck on distant obstacles
+      sim_time: 1.0
+      linear_granularity: 0.05
+      angular_granularity: 0.025
       transform_tolerance: 0.5
-      use_regulated_linear_velocity_scaling: true
-      use_cost_regulated_linear_velocity_scaling: true
-      regulated_linear_scaling_min_radius: 0.8
-      regulated_linear_scaling_min_speed: 0.08
-      use_collision_detection: true
-      max_allowed_time_to_collision_up_to_carrot: 1.0
-      use_rotate_to_heading: true
-      rotate_to_heading_min_angle: 0.35
-      rotate_to_heading_angular_vel: 1.2
-      max_angular_accel: 3.0
-      allow_reversing: true
+      xy_goal_tolerance: 0.15
+      trans_stopped_velocity: 0.05
+      short_circuit_trajectory_evaluation: True
+      stateful: True
+
+      # Trajectory critics (scoring functions)
+      # Higher scale = more weight on that criterion
+      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "PreferForward", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      # ObstacleFootprint: Better than BaseObstacle - checks full robot footprint
+      # Scale must be HIGH to reject trajectories near obstacles
+      ObstacleFootprint.scale: 32.0
+      ObstacleFootprint.sum_scores: false
+      # PathAlign: Align robot heading with path direction
+      PathAlign.scale: 28.0
+      PathAlign.forward_point_distance: 0.5
+      # GoalAlign: Align heading toward goal
+      GoalAlign.scale: 20.0
+      GoalAlign.forward_point_distance: 0.5
+      # PathDist: Stay close to the global path
+      PathDist.scale: 24.0
+      # GoalDist: Move toward goal
+      GoalDist.scale: 24.0
+      RotateToGoal.scale: 16.0
+      RotateToGoal.slowing_factor: 6.0
+      RotateToGoal.lookahead_time: -1.0
+      PreferForward.scale: 8.0
 
 local_costmap:
   local_costmap:
@@ -233,13 +268,13 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [0.5, 0.0, 2.0]  # [vx, vy, vtheta] in m/s
-    min_velocity: [-0.2, 0.0, -2.0]
+    max_velocity: [0.5, 0.5, 2.0]  # [vx, vy, vtheta] in m/s
+    min_velocity: [-0.5, -0.5, -2.0]
     max_accel: [1.5, 1.5, 3.0]
     max_decel: [-1.5, -1.5, -3.0]
     odom_topic: "/odometry/filtered"
     odom_duration: 0.1
-    deadband_velocity: [0.0, 0.0, 0.05]
+    deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
 
 collision_monitor:
