@@ -95,6 +95,23 @@ def generate_launch_description():
         ]
     )
 
+    #Termokamera node for å konvertere rå termiske bilder til Celsius
+    thermal_converter = Node(
+        package='ros_gz_application',
+        executable='thermal_converting',   
+        name='thermal_converter',
+        output='screen',
+        parameters=[
+            {'min_temp_celsius': 20.0},
+            {'max_temp_celsius': 100.0},
+            {'bad_pixel_correction': False},
+            {'use_sim_time': False}
+        ],
+        remappings=[
+            ('/image_raw', '/camera/image_raw')
+        ]   
+    )
+
     # 5. Lokalisering & Autonomi
     ekf_node = Node(
         package='robot_localization',
