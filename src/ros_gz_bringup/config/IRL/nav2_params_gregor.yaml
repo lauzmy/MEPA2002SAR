@@ -206,7 +206,7 @@ planner_server:
       # Using Smac 2D planner instead of NavFn - better handling of tight spaces
       # and doesn't have the "legal potential but no path" bug
       plugin: "nav2_smac_planner::SmacPlanner2D"
-      tolerance: 0.20           # Accept goals within 20cm of requested point
+      tolerance: 0.50           # Accept goals within 50cm of requested point
       allow_unknown: true
       max_iterations: 1000000   # Maximum A* iterations
       max_on_approach_iterations: 1000
