@@ -95,7 +95,7 @@ controller_server:
       RotateToGoal.scale: 32.0
       RotateToGoal.slowing_factor: 4.0
       RotateToGoal.lookahead_time: -1.0
-      PreferForward.scale: 8.0
+      
 
 local_costmap:
   local_costmap:
