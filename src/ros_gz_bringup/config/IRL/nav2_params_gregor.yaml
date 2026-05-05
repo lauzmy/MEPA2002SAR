@@ -1,23 +1,6 @@
 # Nav2 Parameters for Project Ogre Mecanum Drive Robot
 # Configured for omnidirectional movement with RPLIDAR + RealSense obstacle avoidance
 
-amcl:
-  ros__parameters:
-    use_sim_time: false # Sett til true hvis du bruker Gazebo/simulering
-    robot_model_type: "nav2_amcl::OmniMotionModel" # VELDIG viktig for mecanum!
-    alpha1: 0.2
-    alpha2: 0.2
-    alpha3: 0.2
-    alpha4: 0.2
-    alpha5: 0.2
-    base_frame_id: "base_footprint" # Eller "base_footprint" avhengig av URDF-en din
-    odom_frame_id: "odom"
-    scan_topic: /test_robot/scan
-    map_topic: "map"
-    set_initial_pose: true
-    initial_pose: {x: 0.0, y: 0.0, yaw: 0.0}
-
-
 bt_navigator:
   ros__parameters:
     use_sim_time: False
