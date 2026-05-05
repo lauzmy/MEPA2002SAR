@@ -77,7 +77,7 @@ controller_server:
 
       # Trajectory critics (scoring functions)
       # Higher scale = more weight on that criterion
-      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "PreferForward", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # ObstacleFootprint: Better than BaseObstacle - checks full robot footprint
       # Scale must be HIGH to reject trajectories near obstacles
       ObstacleFootprint.scale: 32.0
