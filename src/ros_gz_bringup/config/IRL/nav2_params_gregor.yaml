@@ -47,10 +47,10 @@ controller_server:
       min_vel_y: -0.5  # Mecanum can strafe
       max_vel_x: 0.5
       max_vel_y: 0.5
-      max_vel_theta: 1.0
+      max_vel_theta: 1.5
       min_speed_xy: 0.0
       max_speed_xy: 0.5
-      min_speed_theta: 0.0
+      min_speed_theta: 0.12
 
       # Acceleration limits
       acc_lim_x: 1.5
@@ -77,7 +77,7 @@ controller_server:
 
       # Trajectory critics (scoring functions)
       # Higher scale = more weight on that criterion
-      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "PreferForward", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # ObstacleFootprint: Better than BaseObstacle - checks full robot footprint
       # Scale must be HIGH to reject trajectories near obstacles
       ObstacleFootprint.scale: 32.0
@@ -92,10 +92,9 @@ controller_server:
       PathDist.scale: 24.0
       # GoalDist: Move toward goal
       GoalDist.scale: 20.0
-      RotateToGoal.scale: 12.0
-      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.scale: 40.0
+      RotateToGoal.slowing_factor: 2.0
       RotateToGoal.lookahead_time: -1.0
-      PreferForward.scale: 15.0
 
 local_costmap:
   local_costmap:
