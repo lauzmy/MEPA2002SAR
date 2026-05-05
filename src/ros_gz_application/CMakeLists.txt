@@ -45,4 +45,10 @@ install(PROGRAMS
 	RENAME allocator
 )
 
+install(PROGRAMS
+	nodes/thermal_converter.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME thermal_converter
+)
+
 ament_package()
