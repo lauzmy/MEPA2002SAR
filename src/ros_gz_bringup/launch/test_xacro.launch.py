@@ -17,6 +17,7 @@ def generate_launch_description():
     pkg_ros_gz_sim = get_package_share_directory('ros_gz_sim')
     pkg_example_gazebo = get_package_share_directory('ros_gz_gazebo')
     pkg_slam_toolbox = get_package_share_directory('slam_toolbox')
+    pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
 
     # World xacro -> sdf (samme stil som roboten)
     world_xacro_file = os.path.join(pkg_example_gazebo, 'worlds', 'test_xacro.sdf.xacro')
@@ -47,6 +48,18 @@ def generate_launch_description():
         name='GZ_SIM_RESOURCE_PATH',
         value=[models_path, os.pathsep, os.environ.get('GZ_SIM_RESOURCE_PATH', '')]
     )
+
+    # Lanseringsargumenter (Terminal-parametere)
+    rviz_arg = DeclareLaunchArgument('rviz', default_value='true', description='Open RViz.')
+    slam_arg = DeclareLaunchArgument('slam', default_value='true', description='Start slam_toolbox')
+    nav2_arg = DeclareLaunchArgument('nav2', default_value='true', description='Run Nav2')
+    use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time')
+
+    slam_params_default = os.path.join(
+            pkg_project_bringup, 'config', 'sim', 'mapper_params_online_async.yaml'
+        )
+    slam_params_arg = DeclareLaunchArgument('slam_params_file', default_value=slam_params_default,
+                            description='Path to slam_toolbox params yaml')
 
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')),
@@ -106,10 +119,6 @@ def generate_launch_description():
         name='yolo_coco_node',
         output='screen',
     )
-
-    slam_params_default = os.path.join(
-            pkg_project_bringup, 'config', 'sim', 'mapper_params_online_async.yaml'
-        )
     
     ekf_node = Node(
         package='robot_localization',
@@ -130,22 +139,40 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('slam'))
     )
 
+    # Finn stien til Nav2 konfigurasjonsfilen for simulering
+    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'sim', 'nav2_params_protomota.yaml')
+
+    nav2 = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')
+        ),
+        launch_arguments={
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'params_file': nav2_params_file
+        }.items(),
+        condition=IfCondition(LaunchConfiguration('nav2'))
+    )
+
 
 
     return LaunchDescription([
         gz_resource_path,
         gz_sim,
-        DeclareLaunchArgument('rviz', default_value='true', description='Open RViz.'),
-        DeclareLaunchArgument('slam', default_value='true', description='Start slam_toolbox'),
-        DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time'),
-        DeclareLaunchArgument('slam_params_file', default_value=slam_params_default,
-                            description='Path to slam_toolbox params yaml'),
+        
+        # Inkluder disse deklarerte argumentene
+        rviz_arg,
+        slam_arg,
+        nav2_arg,
+        use_sim_time_arg,
+        slam_params_arg,
+
         bridge,
         robot_state_publisher,
         lidar_sweeper,
         laser_assembler_node,
         ekf_node,
         slam,
+        nav2,
         rviz,
         YOLO_node
     ])
