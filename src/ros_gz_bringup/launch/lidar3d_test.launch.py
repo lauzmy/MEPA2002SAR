@@ -85,7 +85,7 @@ def generate_launch_description():
         name='ldlidar',
         output='screen',
         parameters=[{
-            'serial_port': LaunchConfiguration('serial_port'),
+            'serial_port': '/dev/ttyAMA0',
             'topic_name': '/scan',
             'lidar_frame': 'laser',
             'lidar_type': 'LD06',
@@ -108,7 +108,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             **sweep_params,
-            'sim': sim,
+            'sim': False,                 # set true to skip PWM writes (for testing without servo)
             'joint_name': 'lidar_joint',
             'joint_state_topic': '/lidar_joint_states',
             'cmd_topic': '/lidar_cmd_pos',
