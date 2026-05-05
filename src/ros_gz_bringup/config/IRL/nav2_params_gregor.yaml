@@ -217,7 +217,7 @@ planner_server:
 
       # Bevegelsesmodell — DUBIN = kun forover (det du vil ha)
       # REEDS_SHEPP ville tillatt revers; ikke bruk det.
-      motion_model_for_search: "DUBIN"
+      motion_model_for_search: "REEDS_SHEPP"
       angle_quantization_bins: 72     # 5° oppløsning på heading
       minimum_turning_radius: 0.25    # m. Mecanum kan teknisk 0, men Hybrid trenger >0.
                                       # 0.25 gir myke kurver controlleren faktisk klarer.
