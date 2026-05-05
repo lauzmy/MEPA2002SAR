@@ -110,8 +110,8 @@ local_costmap:
       height: 3
       resolution: 0.05
       # Robot footprint: 220mm x 180mm = 0.22m x 0.18m
-      # Use circumscribed radius: sqrt((0.11)^2 + (0.09)^2) = 0.142m, round up to 0.15m
-      robot_radius: 0.15
+      footprint: "[[0.11, 0.09], [0.11, -0.09], [-0.11, -0.09], [-0.11, 0.09]]"
+      footprint_padding: 0.02
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -153,7 +153,8 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      robot_radius: 0.15
+      footprint: "[[0.11, 0.09], [0.11, -0.09], [-0.11, -0.09], [-0.11, 0.09]]"
+      footprint_padding: 0.02
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -203,16 +204,44 @@ planner_server:
     use_sim_time: False
     planner_plugins: ["GridBased"]
     GridBased:
-      # Using Smac 2D planner instead of NavFn - better handling of tight spaces
-      # and doesn't have the "legal potential but no path" bug
-      plugin: "nav2_smac_planner::SmacPlanner2D"
-      tolerance: 0.15           # Accept goals within 50cm of requested point
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+
+      # Søk-/toleranseparametere
+      tolerance: 0.20                 # Aksepter mål innen 20 cm
       allow_unknown: true
-      max_iterations: 1000000   # Maximum A* iterations
+      downsample_costmap: false
+      downsampling_factor: 1
+      max_iterations: 1000000
       max_on_approach_iterations: 1000
-      max_planning_time: 2.0    # seconds
-      cost_travel_multiplier: 2.0  # Prefer lower-cost paths
-      use_final_approach_orientation: False
+      max_planning_time: 2.0
+
+      # Bevegelsesmodell — DUBIN = kun forover (det du vil ha)
+      # REEDS_SHEPP ville tillatt revers; ikke bruk det.
+      motion_model_for_search: "DUBIN"
+      angle_quantization_bins: 72     # 5° oppløsning på heading
+      minimum_turning_radius: 0.25    # m. Mecanum kan teknisk 0, men Hybrid trenger >0.
+                                      # 0.25 gir myke kurver controlleren faktisk klarer.
+      reverse_penalty: 2.0            # Irrelevant med DUBIN, men greit
+      change_penalty: 0.0             # 0 = ikke straff for å bytte retning underveis
+      non_straight_penalty: 1.20      # Foretrekk rette segmenter
+      cost_penalty: 2.0               # Vekt på å unngå kostnader (inflation)
+      retrospective_penalty: 0.015
+
+      # Analytisk ekspansjon (Reed-Shepp/Dubin shortcut til mål)
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0
+      analytic_expansion_max_cost: 200.0
+      analytic_expansion_max_cost_override: false
+
+      # Goal heading-håndtering — DETTE er nøkkelen for «riktig retning på mål»
+      goal_heading_mode: "DEFAULT"    # Bruk yaw fra det du sender som goal pose
+      use_final_approach_orientation: false  # Ikke overstyr goal yaw
+
+      # Heuristikk-cache: skru på hvis du ikke flytter mål ofte (rask replanning)
+      cache_obstacle_heuristic: false
+      lookup_table_size: 20.0
+
+      smooth_path: true
       smoother:
         max_iterations: 1000
         w_smooth: 0.3
