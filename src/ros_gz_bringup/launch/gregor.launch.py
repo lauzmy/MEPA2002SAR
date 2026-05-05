@@ -193,7 +193,6 @@ def generate_launch_description():
         ekf_node,
         slam,
         nav2,
-        lidar_sweeper,
         ready_message
     ])
 
