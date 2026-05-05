@@ -61,9 +61,9 @@ controller_server:
       decel_lim_theta: -3.0
 
       # Path/goal tolerances
-      vx_samples: 15
-      vy_samples: 5  # Mecanum can strafe
-      vtheta_samples: 15
+      vx_samples: 20
+      vy_samples: 10  # Mecanum can strafe
+      vtheta_samples: 20
       # sim_time: How far ahead (seconds) to simulate trajectories
       # Balance: too short = cuts corners, too long = gets stuck on distant obstacles
       sim_time: 1.2
@@ -77,24 +77,25 @@ controller_server:
 
       # Trajectory critics (scoring functions)
       # Higher scale = more weight on that criterion
-      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToGoal", "ObstacleFootprint", "Oscillation", "PreferForward", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # ObstacleFootprint: Better than BaseObstacle - checks full robot footprint
       # Scale must be HIGH to reject trajectories near obstacles
       ObstacleFootprint.scale: 32.0
       ObstacleFootprint.sum_scores: false
       # PathAlign: Align robot heading with path direction
-      PathAlign.scale: 24.0
+      PathAlign.scale: 12.0
       PathAlign.forward_point_distance: 0.5
       # GoalAlign: Align heading toward goal
-      GoalAlign.scale: 20.0
+      GoalAlign.scale: 10.0
       GoalAlign.forward_point_distance: 0.5
       # PathDist: Stay close to the global path
       PathDist.scale: 24.0
       # GoalDist: Move toward goal
       GoalDist.scale: 20.0
-      RotateToGoal.scale: 32.0
+      RotateToGoal.scale: 12.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
+      PreferForward.scale: 15.0
 
 local_costmap:
   local_costmap:
@@ -211,7 +212,7 @@ planner_server:
       max_on_approach_iterations: 1000
       max_planning_time: 2.0    # seconds
       cost_travel_multiplier: 2.0  # Prefer lower-cost paths
-      use_final_approach_orientation: false
+      use_final_approach_orientation: true
       smoother:
         max_iterations: 1000
         w_smooth: 0.3
