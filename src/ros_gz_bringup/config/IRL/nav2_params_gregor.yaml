@@ -212,7 +212,7 @@ planner_server:
       max_on_approach_iterations: 1000
       max_planning_time: 2.0    # seconds
       cost_travel_multiplier: 2.0  # Prefer lower-cost paths
-      use_final_approach_orientation: true
+      use_final_approach_orientation: False
       smoother:
         max_iterations: 1000
         w_smooth: 0.3
