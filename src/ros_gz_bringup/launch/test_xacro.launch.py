@@ -64,7 +64,7 @@ def generate_launch_description():
     rviz = Node(
         package='rviz2',
         executable='rviz2',
-        arguments=['-d', os.path.join(pkg_project_bringup, 'config', 'test_robot.rviz')],
+        arguments=['-d', os.path.join(pkg_project_bringup, 'config', 'sim' , 'test_robot.rviz')],
         parameters=[{'use_sim_time': True}],
         condition=IfCondition(LaunchConfiguration('rviz'))
     )
@@ -73,7 +73,7 @@ def generate_launch_description():
         package='ros_gz_bridge',
         executable='parameter_bridge',
         parameters=[{
-            'config_file': os.path.join(pkg_project_bringup, 'config', 'ros_gz_bridge.yaml'),
+            'config_file': os.path.join(pkg_project_bringup, 'config', 'sim', 'ros_gz_bridge.yaml'),
             'qos_overrides./tf_static.publisher.durability': 'transient_local',
         }],
         output='screen'
@@ -108,7 +108,7 @@ def generate_launch_description():
     )
 
     slam_params_default = os.path.join(
-            pkg_project_bringup, 'config', 'mapper_params_online_async.yaml'
+            pkg_project_bringup, 'config', 'sim', 'mapper_params_online_async.yaml'
         )
     
     ekf_node = Node(
@@ -116,7 +116,7 @@ def generate_launch_description():
         executable='ekf_node',
         name='ekf_filter_node',
         output='screen',
-        parameters=[os.path.join(pkg_project_bringup, 'config', 'ekf.yaml')]
+        parameters=[os.path.join(pkg_project_bringup, 'config', 'sim', 'ekf.yaml')]
     )
     
     slam = IncludeLaunchDescription(

@@ -102,12 +102,12 @@ def generate_launch_description():
         name='ekf_filter_node',
         output='screen',
         parameters=[
-            os.path.join(pkg_project_bringup, 'config', 'ekf_imu.yaml'),
+            os.path.join(pkg_project_bringup, 'config', 'IRL', 'ekf_imu.yaml'),
             {'use_sim_time': False} # Overskriver 'true' innstillingen som ligger inne i ekf_imu.yaml!
         ]
     )
     
-    slam_params_default = os.path.join(pkg_project_bringup, 'config', 'mapper_params_online_async.yaml')
+    slam_params_default = os.path.join(pkg_project_bringup, 'config', 'IRL', 'mapper_params_online_async.yaml')
     slam = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_slam_toolbox, 'launch', 'online_async_launch.py')
@@ -124,7 +124,7 @@ def generate_launch_description():
     
     # Finn stien til Nav2 konfigurasjonsfilen
     # OBS: Sørg for at filnavnet matcher din faktiske config-fil
-    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'nav2_params_gregor.yaml')
+    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'IRL', 'nav2_params_gregor.yaml')
 
     # Nav2 lanseringsbeskrivelse
     nav2 = IncludeLaunchDescription(
