@@ -21,6 +21,8 @@ services:
       - ${HOME}/.Xauthority:/home/ubuntu/.Xauthority:ro
       - ${HOME}/ros2_ws:/home/ubuntu/ros2_ws
       - /dev:/dev
+      - /sys/class/pwm:/sys/class/pwm
+      - /sys/devices:/sys/devices
       
     devices:
       - /dev/gpiochip0
