@@ -26,6 +26,6 @@ ekf_filter_node:
                   false, false, false,   # Roll, Pitch, Yaw - Absolutt basert på kompass (slått AV pga støy!)
                   false, false, false,   # Vx, Vy, Vz - Hastighet (IMU har ikke dette)
                   false, false, true,    # Vroll, Vpitch, Vyaw - Gyroskopets rotasjonshastighet (PÅ!)
-                  true, true, false]   # Ax, Ay, Az - Akselerometerets lineære akselerasjon
+                  false, false, false]   # Ax, Ay, Az - Akselerometerets lineære akselerasjon
     imu0_differential: false
     imu0_relative: true|
