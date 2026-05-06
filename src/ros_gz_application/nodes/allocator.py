@@ -196,7 +196,7 @@ class MecanumAllocator(Node):
         #   RR = vx + vy + L*wz
         vx = (v4 + v3 + v2 + v1) / 4.0
         vy = (-v4 + v3 - v2 + v1) / 4.0
-        wz = (v4 - v3 - v2 + v1) / (4.0 * L)
+        wz = -(v4 - v3 - v2 + v1) / (4.0 * L)
 
         # 3. Odometrey integration: Calculate how much we have moved since last time
         current_time = self.get_clock().now()
