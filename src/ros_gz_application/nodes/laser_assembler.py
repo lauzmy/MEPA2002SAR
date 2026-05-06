@@ -172,10 +172,10 @@ class TiltLaserAssembler(Node):
         # --- Lag PID state -----------------------------------------------
         # Error signal: estimated lag (seconds) derived from the Z split
         # between consecutive opposite-direction half-sweeps.
-        # Kp=0.6  Ki=0.08  Kd=0.04  (dt ≈ half_period)
-        self._pid_kp = 0.6
-        self._pid_ki = 0.08
-        self._pid_kd = 0.04
+        # Kp=0.15  Ki=0.02  Kd=0.01  (dt ≈ half_period)
+        self._pid_kp = 0.15
+        self._pid_ki = 0.02
+        self._pid_kd = 0.01
         self._pid_integral = 0.0
         self._pid_last_err: float | None = None
         self._cal_last_dir: int | None = None
@@ -364,11 +364,14 @@ class TiltLaserAssembler(Node):
         # in floor Z between consecutive opposite-direction half-sweeps,
         # converted to a lag estimate via the sweep angular velocity.
         if self.auto_lag and self._last_dir is not None:
-            z_vals = pts[:, 2]
-            thresh = np.percentile(z_vals, 20)
-            floor_mask = z_vals <= thresh
-            if floor_mask.sum() >= 10:
-                floor_z = float(np.median(z_vals[floor_mask]))
+            # Floor detection: use points within a narrow absolute Z band
+            # just above ground (0 ± 60 mm in base_footprint).  This is much
+            # more reliable than a percentile when the cloud is skewed, because
+            # the band is defined in world coordinates and doesn't move with
+            # the error.  Requires at least 20 points to proceed.
+            floor_mask = (pts[:, 2] >= -0.06) & (pts[:, 2] <= 0.06)
+            if floor_mask.sum() >= 20:
+                floor_z = float(np.median(pts[floor_mask, 2]))
                 mean_r = float(np.median(
                     np.linalg.norm(pts[floor_mask, :3] - self.mount, axis=1)))
 
@@ -376,9 +379,7 @@ class TiltLaserAssembler(Node):
                         and self._cal_last_dir != self._last_dir
                         and self._cal_last_floor_z is not None
                         and mean_r > 0.1):
-                    # delta_z = floor_z(up) - floor_z(down)
-                    # = -2 * omega * lag * mean_r
-                    # → lag_err = -delta_z / (2 * omega * mean_r)
+
                     if self._cal_last_dir == 1:   # last=up, current=down
                         delta_z = self._cal_last_floor_z - floor_z
                     else:                          # last=down, current=up
@@ -388,7 +389,7 @@ class TiltLaserAssembler(Node):
 
                     # PID
                     self._pid_integral += lag_err * self.half_period
-                    self._pid_integral = max(-0.2, min(0.2, self._pid_integral))
+                    self._pid_integral = max(-0.1, min(0.1, self._pid_integral))
                     derivative = 0.0
                     if self._pid_last_err is not None:
                         derivative = (lag_err - self._pid_last_err) / self.half_period
@@ -397,19 +398,31 @@ class TiltLaserAssembler(Node):
                     correction = (self._pid_kp * lag_err
                                   + self._pid_ki * self._pid_integral
                                   + self._pid_kd * derivative)
-                    self.servo_lag = max(-0.3, min(0.3,
-                                                   self.servo_lag + correction))
+                    # Cap correction to ±10 ms per step to prevent wind-up
+                    correction = max(-0.010, min(0.010, correction))
+                    self.servo_lag = max(-0.15, min(0.15,
+                                                    self.servo_lag + correction))
                     self.get_logger().info(
                         f'Auto-lag PID: δz={delta_z*1000:.1f} mm  '
                         f'err={lag_err*1000:.1f} ms  '
-                        f'I={self._pid_integral*1000:.1f}  '
-                        f'D={derivative*1000:.1f}  '
+                        f'corr={correction*1000:.2f} ms  '
                         f'→ servo_lag={self.servo_lag*1000:.1f} ms'
+                    )
+                else:
+                    self.get_logger().debug(
+                        f'Auto-lag: waiting for opposite sweep '
+                        f'(last_dir={self._cal_last_dir}, '
+                        f'cur_dir={self._last_dir})'
                     )
 
                 self._cal_last_dir = self._last_dir
                 self._cal_last_floor_z = floor_z
                 self._cal_last_mean_r = mean_r
+            else:
+                self.get_logger().debug(
+                    f'Auto-lag: only {floor_mask.sum()} floor pts '
+                    f'(need 20) — skipping this sweep'
+                )
 
         header = Header()
         # Stamp = start of the half-sweep (matches the convention used by
