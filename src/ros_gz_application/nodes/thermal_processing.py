@@ -58,9 +58,17 @@ class ThermalProcessor(Node):
 
         self.get_logger().info('ThermalProcessor started')
 
+    def _classify_temperature(self, t):
+        """Classify temperature into bin index"""
+        if t < self.temp_bins[0]:
+            return 0
+        for i in range(len(self.temp_bins) - 1):
+            if t < self.temp_bins[i + 1]:
+                return i + 1
+        return len(self.temp_bins)
+
     def cb_image(self, msg: Image):
         temp = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
-        # temp is float32 Celsius image
 
         # Stats
         valid_mask = np.isfinite(temp)
@@ -75,15 +83,15 @@ class ThermalProcessor(Node):
         self.max_temp_pub.publish(Float32(data=max_temp))
         self.min_temp_pub.publish(Float32(data=min_temp))
 
-        # Visualization: scale to 0-255 and uses colormap
+        # Visualization: scale to 0-255 and apply colormap
         vis = np.clip((temp - self.min_temp) / (self.max_temp - self.min_temp), 0.0, 1.0)
         vis8 = (vis * 255.0).astype(np.uint8)
         if self.blur_kernel > 1:
             vis8 = cv2.GaussianBlur(vis8, (self.blur_kernel, self.blur_kernel), 0)
 
-        # Detection of hotspots over the lowest bin threshold
+        # Hotspot detection
         detect_mask = temp >= self.temp_bins[0]
-        mask_uint8 = (detect_mask.astype(np.uint8) * 255)
+        mask_uint8 = detect_mask.astype(np.uint8) * 255
         contours, _ = cv2.findContours(mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         spots = []
@@ -91,6 +99,7 @@ class ThermalProcessor(Node):
             area = cv2.contourArea(contour)
             if area < self.min_area:
                 continue
+            
             x, y, w, h = cv2.boundingRect(contour)
             cx = int(x + w / 2)
             cy = int(y + h / 2)
@@ -102,42 +111,27 @@ class ThermalProcessor(Node):
         # Classify into bins
         classified = {}
         for x, y, t in spots:
-            placed = False
-            if t < self.temp_bins[0]:
-                classified.setdefault(0, []).append((x, y, t))
-                continue
-            for i in range(len(self.temp_bins) - 1):
-                if self.temp_bins[i] <= t < self.temp_bins[i + 1]:
-                    classified.setdefault(i + 1, []).append((x, y, t))
-                    placed = True
-                    break
-            if placed:
-                continue
-            if t >= self.temp_bins[-1]:
-                classified.setdefault(len(self.temp_bins), []).append((x, y, t))
+            bin_idx = self._classify_temperature(t)
+            classified.setdefault(bin_idx, []).append((x, y, t))
 
-        # Publish per-bin
+        # Publish per-bin (always, even if empty)
         for idx, pub in enumerate(self.bin_pubs):
             bin_list = classified.get(idx, [])
-            if bin_list:
-                arr = Float32MultiArray()
-                data = []
-                for x, y, t in bin_list:
-                    data.extend([float(x), float(y), float(t)])
-                arr.data = data
-                pub.publish(arr)
-
-        # Publish top-N hottest spots (global)
-        top_spots = sorted(spots, key=lambda s: s[2], reverse=True)[: self.num_top_spots]
-        if top_spots:
             arr = Float32MultiArray()
-            data = []
-            for x, y, t in top_spots:
-                data.extend([float(x), float(y), float(t)])
-            arr.data = data
-            self.top_spots_pub.publish(arr)
+            arr.data = []
+            for x, y, t in bin_list:
+                arr.data.extend([float(x), float(y), float(t)])
+            pub.publish(arr)
 
-        # Visualization: color map and mark top spots
+        # Publish top-N hottest spots (always, even if empty)
+        top_spots = sorted(spots, key=lambda s: s[2], reverse=True)[: self.num_top_spots]
+        arr = Float32MultiArray()
+        arr.data = []
+        for x, y, t in top_spots:
+            arr.data.extend([float(x), float(y), float(t)])
+        self.top_spots_pub.publish(arr)
+
+        # Visualization: mark top spots on colormap
         vis_color = cv2.applyColorMap(vis8, cv2.COLORMAP_JET)
         for x, y, t in top_spots:
             cv2.circle(vis_color, (int(x), int(y)), 6, (0, 0, 255), 2)

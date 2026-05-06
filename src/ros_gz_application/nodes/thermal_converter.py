@@ -9,16 +9,14 @@ import numpy as np
 
 
 class ThermalConverter(Node):
-    
-    "Converts raw thermal images (16-bit mono) to Celsius (32-bit float) based on calibration"
-    
+    """Converts raw thermal images (16-bit mono) to Celsius (32-bit float)"""
+
     def __init__(self):
         super().__init__('thermal_converter')
         self.bridge = CvBridge()
         self.frame_count = 0
-        self.read_failures = 0
 
-        # Parametere for calibration and konvertering
+        # Parameters
         self.declare_parameter('min_temp_celsius', 20.0)
         self.declare_parameter('max_temp_celsius', 100.0)
         self.declare_parameter('bad_pixel_correction', False)
@@ -31,8 +29,7 @@ class ThermalConverter(Node):
         self.declare_parameter('show_preview', True)
         self.declare_parameter('preview_window_name', 'PureThermal3 Preview')
 
-        
-        # Read parameters for conversion of raw thermal values (16-bit) to Celsius (32-bit float)
+        # Load parameters
         self.min_temp = float(self.get_parameter('min_temp_celsius').value)
         self.max_temp = float(self.get_parameter('max_temp_celsius').value)
         self.bad_pixel_correction = bool(self.get_parameter('bad_pixel_correction').value)
@@ -45,15 +42,17 @@ class ThermalConverter(Node):
         self.show_preview = bool(self.get_parameter('show_preview').value)
         self.preview_window_name = str(self.get_parameter('preview_window_name').value)
 
-        # Les direkte fra V4L2-enheten (f.eks. /dev/video2)
+        # Open camera
         self.cap = cv2.VideoCapture(self.video_device, cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
+        
         if self.frame_width > 0 and self.frame_height > 0:
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
+        
         if self.force_y16:
-        # PureThermal3 gir ofte 16-bit rå termiske verdier via Y16 over V4L2.
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('Y', '1', '6', ' '))
+        
         if not self.cap.isOpened():
             raise RuntimeError(f'Could not open video device: {self.video_device}')
 
@@ -62,88 +61,103 @@ class ThermalConverter(Node):
         fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC))
         fourcc_str = ''.join(chr((fourcc >> (8 * i)) & 0xFF) for i in range(4))
 
+        # Publishers
         self.pub = self.create_publisher(Image, self.output_topic, 10)
         self.timer = self.create_timer(1.0 / self.frame_rate, self.cb_capture)
 
         self.get_logger().info(
-            f'ThermalConverter started (device={self.video_device}, '
-            f'min={self.min_temp}C max={self.max_temp}C, out={self.output_topic}, '
-            f'format={fourcc_str.strip() or fourcc}, size={actual_w}x{actual_h})'
+            f'ThermalConverter started: device={self.video_device}, '
+            f'temp={self.min_temp}-{self.max_temp}C, format={fourcc_str.strip() or fourcc}, '
+            f'size={actual_w}x{actual_h}, preview={self.show_preview}'
         )
 
     def cb_capture(self):
         ok, frame = self.cap.read()
+        
         if not ok:
-            self.read_failures += 1
-            if self.read_failures % 30 == 1:
-                self.get_logger().warning(f'No frame from {self.video_device} yet')
-            return
+            raise RuntimeError(f'Failed to capture frame from {self.video_device}')
 
         self.frame_count += 1
         raw = self.to_mono16(frame)
 
-        # Konverter til float32 0..1
+        # Convert to float32 0..1
         raw_f = raw.astype(np.float32) / 65535.0
 
-        # Mapper celsius til min/max
+        # Map to Celsius range
         temp_c = self.min_temp + raw_f * (self.max_temp - self.min_temp)
 
-        # Pixel Korrigerering ved behov
+        # Pixel correction
         if self.bad_pixel_correction:
-            # Median filter for enkel pikselkorrigering
             temp_c = cv2.medianBlur(temp_c, 3)
 
-        # Publiserer bildet som 32-bit float med Celsius-verdier
+        # Publish Celsius image
         out_msg = self.bridge.cv2_to_imgmsg(temp_c.astype(np.float32), encoding='32FC1')
         out_msg.header.stamp = self.get_clock().now().to_msg()
         out_msg.header.frame_id = 'thermal_camera'
         self.pub.publish(out_msg)
 
+        # Preview or skip
         if self.show_preview:
-            # Skaler Celsius-bildet til visning og legg på falske farger for enkel inspeksjon.
-            display_8u = cv2.normalize(temp_c, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-            preview = cv2.applyColorMap(display_8u, cv2.COLORMAP_INFERNO)
-            cv2.imshow(self.preview_window_name, preview)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
-                self.get_logger().info('Preview closed by user (q), shutting down node')
-                rclpy.shutdown()
+            self._show_preview(temp_c)
+        else:
+            self.get_logger().debug('Preview disabled')
 
+        # Log first frame
         if self.frame_count == 1:
             self.get_logger().info(
-                f'First frame received from {self.video_device} ({raw.shape[1]}x{raw.shape[0]})'
+                f'First frame: {raw.shape[1]}x{raw.shape[0]}, {raw.dtype}'
             )
 
+    def _show_preview(self, temp_c):
+        """Display thermal preview with false colors"""
+        display_8u = cv2.normalize(temp_c, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        preview = cv2.applyColorMap(display_8u, cv2.COLORMAP_INFERNO)
+        
+        cv2.imshow(self.preview_window_name, preview)
+        key = cv2.waitKey(1) & 0xFF
+        
+        if key == 255:
+            pass  # No key
+        elif key == ord('q'):
+            self.get_logger().info('User pressed q, shutting down')
+            rclpy.shutdown()
+        else:
+            self.get_logger().debug(f'Key: {key}')
+
     def to_mono16(self, frame):
-        # Kamera kan levere ulike formater; normaliser til 16-bit mono for videre konvertering.
+        """Normalize frame to uint16 mono"""
         if frame is None:
-            raise ValueError('Empty frame from camera')
+            raise ValueError('Empty frame')
 
-        if frame.ndim == 2:
-            if frame.dtype == np.uint16:
-                return frame
-            if frame.dtype == np.uint8:
-                return frame.astype(np.uint16) * 257
-            return np.clip(frame, 0, 65535).astype(np.uint16)
-
+        # Fast path: already uint16 mono (expected for PureThermal3 Y16)
+        if frame.ndim == 2 and frame.dtype == np.uint16:
+            return frame
+        
+        # Handle edge cases
         if frame.ndim == 3:
             if frame.shape[2] == 2 and frame.dtype == np.uint8:
-                # Enkelte V4L2/OpenCV-kombinasjoner leverer Y16 som 2x8-bit kanaler.
+                # 2-channel uint8: little-endian uint16
                 return frame[:, :, 0].astype(np.uint16) | (frame[:, :, 1].astype(np.uint16) << 8)
-            if frame.shape[2] == 3:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                return gray.astype(np.uint16) * 257
-            if frame.shape[2] == 4:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
-                return gray.astype(np.uint16) * 257
-
-        raise ValueError(f'Unsupported frame format: shape={frame.shape}, dtype={frame.dtype}')
+            else:
+                # Convert multi-channel to grayscale
+                color_code = cv2.COLOR_BGR2GRAY if frame.shape[2] == 3 else cv2.COLOR_BGRA2GRAY
+                frame = cv2.cvtColor(frame, color_code)
+        
+        # Convert to uint16 if not already
+        if frame.dtype == np.uint16:
+            return frame
+        elif frame.dtype == np.uint8:
+            return frame.astype(np.uint16) * 257
+        else:
+            raise ValueError(f'Unsupported dtype: {frame.dtype}')
 
     def destroy_node(self):
         if self.show_preview:
             cv2.destroyWindow(self.preview_window_name)
+        
         if hasattr(self, 'cap') and self.cap is not None:
             self.cap.release()
+        
         return super().destroy_node()
 
 
