@@ -236,10 +236,12 @@ class TiltLaserAssembler(Node):
         ca = np.cos(alpha)
         sa = np.sin(alpha)
 
-        # Rotate about Y:  [ca 0 sa; 0 1 0; -sa 0 ca] @ [x;y;z]
-        x_h = ca * x_l + sa * z_l
+        # Rotate about Y:  R_y(-alpha) = [ca 0 -sa; 0 1 0; sa 0 ca] @ [x;y;z]
+        # Negated because positive alpha (servo tilting up) should lift beams,
+        # i.e. the physical tilt axis is opposite to the standard R_y convention.
+        x_h = ca * x_l - sa * z_l
         y_h = y_l
-        z_h = -sa * x_l + ca * z_l
+        z_h = sa * x_l + ca * z_l
 
         # Translate into the output (body) frame
         x_b = x_h + self.mount[0]
