@@ -12,7 +12,10 @@ on the real robot (or with a recorded /scan bag):
 
 Usage:
     ros2 launch ros_gz_bringup lidar3d_test.launch.py
-    ros2 launch ros_gz_bringup lidar3d_test.launch.py rviz:=true
+    ros2 launch ros_gz_bringup lidar3d_test.launch.py quality_preset:=fast
+    ros2 launch ros_gz_bringup lidar3d_test.launch.py quality_preset:=custom scans_per_sweep:=80
+    ros2 launch ros_gz_bringup lidar3d_test.launch.py auto_calibrate:=true
+    ros2 launch ros_gz_bringup lidar3d_test.launch.py aggregate_mode:=half_sweep
     ros2 launch ros_gz_bringup lidar3d_test.launch.py lidar:=false   # use bag
     ros2 launch ros_gz_bringup lidar3d_test.launch.py sim:=true       # no PWM
 """
@@ -36,17 +39,22 @@ def generate_launch_description():
     sim_arg = DeclareLaunchArgument(
         'sim', default_value='false',
         description='If true, do not drive the hardware PWM (servo).')
+    preset_arg = DeclareLaunchArgument(
+        'quality_preset', default_value='balanced',
+        description='Density/speed trade-off: fast (20), balanced (50), dense (100), custom.')
+    scans_arg = DeclareLaunchArgument(
+        'scans_per_sweep', default_value='50',
+        description='Scans per full sweep. Used when quality_preset=custom.')
     settle_arg = DeclareLaunchArgument(
         'settle_time_s', default_value='0.08',
-        description='Time the sweeper waits for the servo to physically '
-                    'reach a new step before scans are accepted.')
-    hold_arg = DeclareLaunchArgument(
-        'hold_time_s', default_value='0.15',
-        description='Time the servo is held still at each step. Must be '
-                    '>= one LD06 revolution (100 ms).')
-    step_arg = DeclareLaunchArgument(
-        'step_deg', default_value='3.0',
-        description='Tilt step size in degrees per stop.')
+        description='Time for the servo to physically reach each step. '
+                    'Run auto_calibrate:=true to measure this automatically.')
+    autocal_arg = DeclareLaunchArgument(
+        'auto_calibrate', default_value='false',
+        description='Measure settle_time_s from live scans on startup.')
+    aggregate_arg = DeclareLaunchArgument(
+        'aggregate_mode', default_value='sweep',
+        description='Cloud publish cadence: scan | half_sweep | sweep.')
     lidar_arg = DeclareLaunchArgument(
         'lidar', default_value='true',
         description='Start the ldlidar driver. Set false when replaying a bag.')
@@ -85,7 +93,7 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': False,
             'source_list': ['/lidar_joint_states'],
-            'rate': 50,
+            'rate': 100,
         }],
     )
 
@@ -114,13 +122,20 @@ def generate_launch_description():
             'sim': sim,
             'min_angle_deg': -30.0,
             'max_angle_deg': 30.0,
-            'step_deg': LaunchConfiguration('step_deg'),
+            'quality_preset': LaunchConfiguration('quality_preset'),
+            'scans_per_sweep': LaunchConfiguration('scans_per_sweep'),
             'settle_time_s': LaunchConfiguration('settle_time_s'),
-            'hold_time_s': LaunchConfiguration('hold_time_s'),
+            # hold_time_s left unset (<=0) so it auto-derives from scan rate
+            'lidar_scan_rate_hz': 10.0,
+            'hold_margin_s': 0.02,
             'joint_name': 'lidar_joint',
             'joint_state_topic': '/lidar_joint_states',
+            'joint_state_rate_hz': 100.0,
             'hold_state_topic': '/lidar_hold_state',
             'cmd_topic': '/lidar_cmd_pos',
+            'scan_topic': '/scan',
+            'output_frame': 'base_footprint',
+            'auto_calibrate_on_start': LaunchConfiguration('auto_calibrate'),
         }],
     )
 
@@ -134,8 +149,12 @@ def generate_launch_description():
             'scan_topic': '/scan',
             'cloud_topic': '/lidar3d/points',
             'hold_state_topic': '/lidar_hold_state',
+            'joint_state_topic': '/lidar_joint_states',
+            'joint_name': 'lidar_joint',
             'output_frame': 'base_footprint',
             'settle_guard_s': 0.02,
+            'aggregate_mode': LaunchConfiguration('aggregate_mode'),
+            'scans_per_sweep': LaunchConfiguration('scans_per_sweep'),
         }],
     )
 
@@ -154,9 +173,11 @@ def generate_launch_description():
         lidar_arg,
         rviz_arg,
         serial_port_arg,
+        preset_arg,
+        scans_arg,
         settle_arg,
-        hold_arg,
-        step_arg,
+        autocal_arg,
+        aggregate_arg,
         robot_state_publisher,
         joint_state_publisher,
         ldlidar_node,
