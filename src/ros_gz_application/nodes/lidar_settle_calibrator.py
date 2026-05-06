@@ -19,15 +19,11 @@ For each test step size (degrees), the helper:
   5. The recommended settle_time is the worst (max) over all step sizes,
      plus a small safety margin.
 
-The helper drives the hardware PWM **directly**, so do **not** run
-``lidar_sweeper`` at the same time.  It does not publish any topics
-besides reading ``/scan``.
+The helper drives the hardware PWM **directly**.  Use the launch file
+so the LD06 driver is started for you and the regular ``lidar_sweeper``
+is NOT running at the same time::
 
-Run (real robot):
-    ros2 run ros_gz_application lidar_settle_calibrator
-
-Run (simulation, prints a fake recommendation since there's no PWM):
-    ros2 run ros_gz_application lidar_settle_calibrator --ros-args -p sim:=true
+    ros2 launch ros_gz_bringup lidar_calibrate.launch.py
 """
 
 import math
@@ -48,7 +44,6 @@ class SettleCalibrator(Node):
     def __init__(self):
         super().__init__('lidar_settle_calibrator')
 
-        self.declare_parameter('sim', False)
         self.declare_parameter('scan_topic', '/scan')
         self.declare_parameter('home_deg', 0.0)
         # Step sizes to test (small to large).  The largest step
@@ -81,18 +76,16 @@ class SettleCalibrator(Node):
         self.max_range = float(self.get_parameter('max_range_m').value)
 
         # ----- Hardware PWM ------------------------------------------------
-        self.pwm = None
-        if not self.sim:
-            try:
-                from rpi_hardware_pwm import HardwarePWM
-                self.pwm = HardwarePWM(pwm_channel=0, hz=50, chip=0)
-                self.pwm.start(0)
-                self.pwm.change_duty_cycle(self.PWM_CENTER)
-                time.sleep(0.5)
-                self.get_logger().info('PWM ready (channel 0, 50 Hz).')
-            except Exception as e:  # noqa: BLE001
-                self.get_logger().error(f'Could not init PWM ({e}); aborting.')
-                raise SystemExit(1) from e
+        try:
+            from rpi_hardware_pwm import HardwarePWM
+            self.pwm = HardwarePWM(pwm_channel=0, hz=50, chip=0)
+            self.pwm.start(0)
+            self.pwm.change_duty_cycle(self.PWM_CENTER)
+            time.sleep(0.5)
+            self.get_logger().info('PWM ready (channel 0, 50 Hz).')
+        except Exception as e:  # noqa: BLE001
+            self.get_logger().error(f'Could not init PWM ({e}); aborting.')
+            raise SystemExit(1) from e
 
         # ----- Scan subscription -------------------------------------------
         # Buffer of (t_recv_s, ranges) for the currently-recording window.
@@ -107,8 +100,6 @@ class SettleCalibrator(Node):
 
     # ------------------------------------------------------------------
     def _command(self, angle_deg: float) -> None:
-        if self.pwm is None:
-            return
         duty = self.PWM_CENTER + angle_deg * self.PWM_PERCENT_PER_DEG
         self.pwm.change_duty_cycle(duty)
 
@@ -160,7 +151,8 @@ class SettleCalibrator(Node):
         time.sleep(self.home_settle_s)
         ref_scans = self._record_window(0.3)
         if not ref_scans:
-            self.get_logger().error('No /scan received -- is the lidar driver running?')
+            self.get_logger().error(
+                'Lost /scan stream during reference recording -- aborting step.')
             return None
         # Average the last few reference scans beam-wise (NaN-safe).
         ref_stack = np.vstack([r for _, r in ref_scans[-3:]])
@@ -210,13 +202,10 @@ class SettleCalibrator(Node):
 
     # ------------------------------------------------------------------
     def run(self) -> None:
-        if self.sim:
-            self.get_logger().warn(
-                'sim=true: PWM disabled, no real measurements possible.')
-            return
-
-        # Wait briefly for the lidar driver to start delivering scans.
-        deadline = self._now_s() + 3.0
+        # Brief settle for the lidar driver to start streaming.  The
+        # launch file brings the driver up before we are spawned, but
+        # the first few scans can still be missing.
+        deadline = self._now_s() + 2.0
         while self._now_s() < deadline:
             rclpy.spin_once(self, timeout_sec=0.05)
 
@@ -249,13 +238,12 @@ class SettleCalibrator(Node):
 
     # ------------------------------------------------------------------
     def destroy_node(self):
-        if self.pwm is not None:
-            try:
-                self.pwm.change_duty_cycle(self.PWM_CENTER)
-                time.sleep(0.3)
-                self.pwm.stop()
-            except Exception:  # noqa: BLE001
-                pass
+        try:
+            self.pwm.change_duty_cycle(self.PWM_CENTER)
+            time.sleep(0.3)
+            self.pwm.stop()
+        except Exception:  # noqa: BLE001
+            pass
         super().destroy_node()
 
 
