@@ -124,7 +124,7 @@ def generate_launch_description():
         parameters=[{
             **sweep_params,
             'use_sim_time': False,
-            'servo_lag_s': 0.10,          # tune if cloud "shears" along sweep dir
+            'servo_lag_s': 0.0,          # tune if cloud "shears" along sweep dir
             'pivot_offset_m': 0.0325,     # 32.5 mm laser plane above pivot
             'mount_xyz': [0.0, 0.0, 0.15],
             'scan_topic': '/scan',
