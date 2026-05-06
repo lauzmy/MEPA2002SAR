@@ -36,6 +36,9 @@ def generate_launch_description():
     sim_arg = DeclareLaunchArgument(
         'sim', default_value='false',
         description='If true, do not drive the hardware PWM (servo).')
+    servo_lag_arg = DeclareLaunchArgument(
+        'servo_lag_s', default_value='0.075',
+        description='Servo transport delay in seconds. Tune until stationary objects stop bobbing.')
     lidar_arg = DeclareLaunchArgument(
         'lidar', default_value='true',
         description='Start the ldlidar driver. Set false when replaying a bag.')
@@ -124,7 +127,7 @@ def generate_launch_description():
         parameters=[{
             **sweep_params,
             'use_sim_time': False,
-            'servo_lag_s': 0.0,          # tune if cloud "shears" along sweep dir
+            'servo_lag_s': LaunchConfiguration('servo_lag_s'),
             'pivot_offset_m': 0.0325,     # 32.5 mm laser plane above pivot
             'mount_xyz': [0.0, 0.0, 0.15],
             'scan_topic': '/scan',
@@ -149,6 +152,7 @@ def generate_launch_description():
         lidar_arg,
         rviz_arg,
         serial_port_arg,
+        servo_lag_arg,
         robot_state_publisher,
         joint_state_publisher,
         ldlidar_node,
