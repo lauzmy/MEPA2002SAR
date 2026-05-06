@@ -112,10 +112,11 @@ class LidarSweeper(Node):
             self.get_logger().info('Running in simulation mode - PWM disabled')
 
         # ----- Sweep epoch -------------------------------------------------
-        # Phase 0 == angle = -amplitude (start of an upward half-sweep).
-        # The assembler does NOT need to know this t0 because it evaluates
-        # triangle(t) modulo the period.
-        self.t0 = self.get_clock().now()
+        # Both this node and the assembler evaluate triangle(t % period), where
+        # t is absolute ROS time (seconds).  Using absolute time is critical:
+        # if this node used a relative epoch (clock.now() - t0) the two nodes
+        # would be phase-shifted by (t0 % period), producing wrong tilt angles
+        # in the assembler and a vertically-flipped or sheared point cloud.
 
         self.get_logger().info(
             f'Sweep: ±{math.degrees(self.amplitude):.1f}°, '
@@ -128,7 +129,8 @@ class LidarSweeper(Node):
 
     # ------------------------------------------------------------------
     def _t_now(self) -> float:
-        return (self.get_clock().now() - self.t0).nanoseconds * 1e-9
+        now = self.get_clock().now()
+        return now.nanoseconds * 1e-9
 
     def tick(self):
         t = self._t_now()
