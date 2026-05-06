@@ -98,7 +98,7 @@ def generate_launch_description():
     sweep_params = {
         'amplitude_deg': 30.0,
         'lidar_scan_rate_hz': 10.0,   # LD06 = 10 rev/s
-        'scans_per_sweep': 20,        # full down+up = 2.0 s
+        'scans_per_sweep': 40,        # full down+up = 2.0 s
     }
 
     lidar_sweeper = Node(
