@@ -8,7 +8,7 @@ import cv2
 
 
 class ThermalProcessor(Node):
-    """Process thermal images to find hotspots, classify in temperature bins, and publish results"""
+    """Subscribe to raw thermal, convert to Celsius, detect hotspots, classify by temperature"""
 
     def __init__(self):
         super().__init__('thermal_processor')
@@ -19,25 +19,23 @@ class ThermalProcessor(Node):
         self.declare_parameter('max_temp_celsius', 100.0)
         self.declare_parameter('temp_bins', [20.0, 35.0, 40.0, 50.0, 60.0])
         self.declare_parameter('num_top_spots', 3)
-        self.declare_parameter('min_area_pixels', 100)
-        self.declare_parameter('gaussian_blur_kernel', 5)
-        self.declare_parameter('enable_resize', False)
-        self.declare_parameter('output_width', 640)
-        self.declare_parameter('output_height', 480)
+        self.declare_parameter('min_area_pixels', 50)
+        self.declare_parameter('gaussian_blur_kernel', 3)
+        self.declare_parameter('bad_pixel_correction', False)
 
-        # Read parameters for processing and visualization
+        # Read parameters
         self.min_temp = float(self.get_parameter('min_temp_celsius').value)
         self.max_temp = float(self.get_parameter('max_temp_celsius').value)
         self.temp_bins = sorted([float(b) for b in self.get_parameter('temp_bins').value])
         self.num_top_spots = int(self.get_parameter('num_top_spots').value)
         self.min_area = int(self.get_parameter('min_area_pixels').value)
         self.blur_kernel = int(self.get_parameter('gaussian_blur_kernel').value)
-        self.enable_resize = bool(self.get_parameter('enable_resize').value)
-        self.output_width = int(self.get_parameter('output_width').value)
-        self.output_height = int(self.get_parameter('output_height').value)
+        self.bad_pixel_correction = bool(self.get_parameter('bad_pixel_correction').value)
 
-        # Sub / Pub
-        self.sub = self.create_subscription(Image, '/camera/thermal_celsius', self.cb_image, 10)
+        # Subscribe to raw thermal topic from converter
+        self.sub = self.create_subscription(Image, '/camera/raw_thermal', self.cb_image, 10)
+        
+        # Publishers
         self.processed_pub = self.create_publisher(Image, '/thermal/processed_image', 10)
         self.top_spots_pub = self.create_publisher(Float32MultiArray, '/thermal/top_spots', 10)
         self.avg_temp_pub = self.create_publisher(Float32, '/thermal/average_temperature', 10)
@@ -68,9 +66,18 @@ class ThermalProcessor(Node):
         return len(self.temp_bins)
 
     def cb_image(self, msg: Image):
-        temp = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
+        # Receive raw 16-bit mono thermal
+        raw = self.bridge.imgmsg_to_cv2(msg, desired_encoding='mono16')
 
-        # Stats
+        # Convert raw 16-bit to Celsius
+        raw_f = raw.astype(np.float32) / 65535.0
+        temp = self.min_temp + raw_f * (self.max_temp - self.min_temp)
+
+        # Pixel correction
+        if self.bad_pixel_correction:
+            temp = cv2.medianBlur(temp, 3)
+
+        # Statistics
         valid_mask = np.isfinite(temp)
         if np.any(valid_mask):
             avg_temp = float(np.mean(temp[valid_mask]))
@@ -83,13 +90,13 @@ class ThermalProcessor(Node):
         self.max_temp_pub.publish(Float32(data=max_temp))
         self.min_temp_pub.publish(Float32(data=min_temp))
 
-        # Visualization: scale to 0-255 and apply colormap
+        # Visualization: normalize and apply colormap
         vis = np.clip((temp - self.min_temp) / (self.max_temp - self.min_temp), 0.0, 1.0)
         vis8 = (vis * 255.0).astype(np.uint8)
         if self.blur_kernel > 1:
             vis8 = cv2.GaussianBlur(vis8, (self.blur_kernel, self.blur_kernel), 0)
 
-        # Hotspot detection
+        # Hotspot detection: find pixels above lowest bin threshold
         detect_mask = temp >= self.temp_bins[0]
         mask_uint8 = detect_mask.astype(np.uint8) * 255
         contours, _ = cv2.findContours(mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -108,13 +115,13 @@ class ThermalProcessor(Node):
             t = float(temp[cy, cx])
             spots.append((cx, cy, t))
 
-        # Classify into bins
+        # Classify into temperature bins
         classified = {}
         for x, y, t in spots:
             bin_idx = self._classify_temperature(t)
             classified.setdefault(bin_idx, []).append((x, y, t))
 
-        # Publish per-bin (always, even if empty)
+        # Publish per-bin data
         for idx, pub in enumerate(self.bin_pubs):
             bin_list = classified.get(idx, [])
             arr = Float32MultiArray()
@@ -123,7 +130,7 @@ class ThermalProcessor(Node):
                 arr.data.extend([float(x), float(y), float(t)])
             pub.publish(arr)
 
-        # Publish top-N hottest spots (always, even if empty)
+        # Publish top-N hottest spots
         top_spots = sorted(spots, key=lambda s: s[2], reverse=True)[: self.num_top_spots]
         arr = Float32MultiArray()
         arr.data = []
@@ -134,11 +141,9 @@ class ThermalProcessor(Node):
         # Visualization: mark top spots on colormap
         vis_color = cv2.applyColorMap(vis8, cv2.COLORMAP_JET)
         for x, y, t in top_spots:
-            cv2.circle(vis_color, (int(x), int(y)), 6, (0, 0, 255), 2)
+            cv2.circle(vis_color, (int(x), int(y)), 5, (0, 0, 255), 2)
 
-        if self.enable_resize:
-            vis_color = cv2.resize(vis_color, (self.output_width, self.output_height))
-
+        # Publish processed visualization
         out_msg = self.bridge.cv2_to_imgmsg(vis_color, encoding='bgr8')
         out_msg.header = msg.header
         self.processed_pub.publish(out_msg)

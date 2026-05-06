@@ -95,21 +95,18 @@ def generate_launch_description():
         ]
     )
 
-    #Termokamera node for å konvertere rå termiske bilder til Celsius
+    #Termokamera node for å lese rå termiske bilder fra /dev/video2
     thermal_converter = Node(
         package='ros_gz_application',
-        executable='thermal_converting',   
+        executable='thermal_converter',
         name='thermal_converter',
         output='screen',
         parameters=[
-            {'min_temp_celsius': 20.0},
-            {'max_temp_celsius': 100.0},
-            {'bad_pixel_correction': False},
+            {'frame_rate': 9.0},
+            {'show_preview': True},
+            {'preview_scale': 4.0},
             {'use_sim_time': False}
-        ],
-        remappings=[
-            ('/image_raw', '/camera/image_raw')
-        ]   
+        ]
     )
 
     thermal_processor = Node(
@@ -121,7 +118,9 @@ def generate_launch_description():
                 {'min_temp_celsius': 20.0},
                 {'max_temp_celsius': 100.0},
                 {'temp_bins': [20.0, 35.0, 40.0, 50.0, 60.0]},
-                {'num_top_spots': 3}
+            {'num_top_spots': 3},
+            {'min_area_pixels': 50},
+            {'gaussian_blur_kernel': 3}
         ]
     )
         

@@ -9,7 +9,7 @@ import numpy as np
 
 
 class ThermalConverter(Node):
-    """Converts raw thermal images (16-bit mono) to Celsius (32-bit float)"""
+    """Read raw thermal camera and publish as ROS Image topic"""
 
     def __init__(self):
         super().__init__('thermal_converter')
@@ -17,22 +17,17 @@ class ThermalConverter(Node):
         self.frame_count = 0
 
         # Parameters
-        self.declare_parameter('min_temp_celsius', 20.0)
-        self.declare_parameter('max_temp_celsius', 100.0)
-        self.declare_parameter('bad_pixel_correction', False)
         self.declare_parameter('video_device', '/dev/video2')
-        self.declare_parameter('frame_rate', 30.0)
-        self.declare_parameter('output_topic', '/camera/thermal_celsius')
+        self.declare_parameter('frame_rate', 9.0)
+        self.declare_parameter('output_topic', '/camera/raw_thermal')
         self.declare_parameter('force_y16', True)
         self.declare_parameter('frame_width', 160)
         self.declare_parameter('frame_height', 120)
         self.declare_parameter('show_preview', True)
-        self.declare_parameter('preview_window_name', 'PureThermal3 Preview')
+        self.declare_parameter('preview_scale', 4.0)
+        self.declare_parameter('preview_window_name', 'PureThermal3 Raw')
 
         # Load parameters
-        self.min_temp = float(self.get_parameter('min_temp_celsius').value)
-        self.max_temp = float(self.get_parameter('max_temp_celsius').value)
-        self.bad_pixel_correction = bool(self.get_parameter('bad_pixel_correction').value)
         self.video_device = str(self.get_parameter('video_device').value)
         self.frame_rate = max(1.0, float(self.get_parameter('frame_rate').value))
         self.output_topic = str(self.get_parameter('output_topic').value)
@@ -40,6 +35,7 @@ class ThermalConverter(Node):
         self.frame_width = int(self.get_parameter('frame_width').value)
         self.frame_height = int(self.get_parameter('frame_height').value)
         self.show_preview = bool(self.get_parameter('show_preview').value)
+        self.preview_scale = max(1.0, float(self.get_parameter('preview_scale').value))
         self.preview_window_name = str(self.get_parameter('preview_window_name').value)
 
         # Open camera
@@ -61,13 +57,13 @@ class ThermalConverter(Node):
         fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC))
         fourcc_str = ''.join(chr((fourcc >> (8 * i)) & 0xFF) for i in range(4))
 
-        # Publishers
+        # Publishers: publish raw thermal data
         self.pub = self.create_publisher(Image, self.output_topic, 10)
         self.timer = self.create_timer(1.0 / self.frame_rate, self.cb_capture)
 
         self.get_logger().info(
             f'ThermalConverter started: device={self.video_device}, '
-            f'temp={self.min_temp}-{self.max_temp}C, format={fourcc_str.strip() or fourcc}, '
+            f'format={fourcc_str.strip() or fourcc}, '
             f'size={actual_w}x{actual_h}, preview={self.show_preview}'
         )
 
@@ -80,27 +76,15 @@ class ThermalConverter(Node):
         self.frame_count += 1
         raw = self.to_mono16(frame)
 
-        # Convert to float32 0..1
-        raw_f = raw.astype(np.float32) / 65535.0
-
-        # Map to Celsius range
-        temp_c = self.min_temp + raw_f * (self.max_temp - self.min_temp)
-
-        # Pixel correction
-        if self.bad_pixel_correction:
-            temp_c = cv2.medianBlur(temp_c, 3)
-
-        # Publish Celsius image
-        out_msg = self.bridge.cv2_to_imgmsg(temp_c.astype(np.float32), encoding='32FC1')
+        # Publish raw 16-bit image (no conversion to Celsius here)
+        out_msg = self.bridge.cv2_to_imgmsg(raw.astype(np.uint16), encoding='mono16')
         out_msg.header.stamp = self.get_clock().now().to_msg()
         out_msg.header.frame_id = 'thermal_camera'
         self.pub.publish(out_msg)
 
-        # Preview or skip
+        # Optional preview
         if self.show_preview:
-            self._show_preview(temp_c)
-        else:
-            self.get_logger().debug('Preview disabled')
+            self._show_preview(raw)
 
         # Log first frame
         if self.frame_count == 1:
@@ -108,18 +92,23 @@ class ThermalConverter(Node):
                 f'First frame: {raw.shape[1]}x{raw.shape[0]}, {raw.dtype}'
             )
 
-    def _show_preview(self, temp_c):
-        """Display thermal preview with false colors"""
-        display_8u = cv2.normalize(temp_c, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        preview = cv2.applyColorMap(display_8u, cv2.COLORMAP_INFERNO)
+    def _show_preview(self, raw):
+        """Display raw thermal with false colors (for debug only)"""
+        display_8u = cv2.normalize(raw, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        colored = cv2.applyColorMap(display_8u, cv2.COLORMAP_INFERNO)
+
+        if self.preview_scale != 1.0:
+            width = int(colored.shape[1] * self.preview_scale)
+            height = int(colored.shape[0] * self.preview_scale)
+            colored = cv2.resize(colored, (width, height), interpolation=cv2.INTER_NEAREST)
         
-        cv2.imshow(self.preview_window_name, preview)
+        cv2.imshow(self.preview_window_name, colored)
         key = cv2.waitKey(1) & 0xFF
         
         if key == 255:
             pass  # No key
-        elif key == ord('q'):
-            self.get_logger().info('User pressed q, shutting down')
+        elif key == ord('q') or key == 27:  # q or Esc
+            self.get_logger().info('User pressed quit, shutting down')
             rclpy.shutdown()
         else:
             self.get_logger().debug(f'Key: {key}')
