@@ -75,7 +75,7 @@ class MecanumAllocator(Node):
         # Instead of sending to ESP32, ONLY update the internal variables
         self.target_vx = msg.linear.x
         self.target_vy = msg.linear.y
-        self.target_wz = msg.angular.z
+        self.target_wz = -msg.angular.z
 
     def send_serial_data(self):
         if self.ser is None or not self.ser.is_open:
