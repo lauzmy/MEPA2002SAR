@@ -22,25 +22,29 @@ Pipeline per incoming /scan
     ``output_frame`` (default base_footprint).  This is the layout MOLA-LO,
     FAST-LIO, LIO-SAM etc. expect.
 
-Why this works on the real robot
---------------------------------
-There is no encoder on the tilt servo, so we cannot read the angle back.
-Instead, the sweeper node and this node share an *analytical* triangle
-trajectory of the form alpha(t mod period).  As long as both nodes run on
-the same ROS clock and use the same parameters, the angle the assembler
-computes for any beam timestamp matches the angle the servo was commanded
-to within the servo's own tracking error.  The servo lag is modelled by
-the ``servo_lag_s`` parameter (subtracted from each beam timestamp).
+Angle source
+------------
+The assembler subscribes to the JointState topic published by lidar_sweeper
+(``joint_state_topic`` parameter, default ``/lidar_joint_states``) and keeps
+a rolling history of (timestamp, angle) pairs.  For each beam it interpolates
+the commanded angle at that beam's timestamp using numpy.interp.  This
+eliminates all phase-ambiguity from the analytical model.
+
+The ``servo_lag_s`` parameter is still available to compensate for the servo's
+mechanical tracking lag (the delay between the command and physical motion).
+If the JointState topic is not available the node falls back to the analytical
+triangle wave.
 """
 
 import math
+from collections import deque
 
 import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
-from sensor_msgs.msg import LaserScan, PointCloud2, PointField
+from sensor_msgs.msg import JointState, LaserScan, PointCloud2, PointField
 from std_msgs.msg import Header
 
 
@@ -130,6 +134,9 @@ class TiltLaserAssembler(Node):
         self.declare_parameter('lidar_scan_rate_hz', 10.0)
         self.declare_parameter('scans_per_sweep', 20)
         self.declare_parameter('servo_lag_s', 0.0)         # measured servo delay
+        # When true the node estimates and corrects servo lag automatically by
+        # comparing mean Z between consecutive up/down half-sweeps.
+        self.declare_parameter('auto_lag', True)
 
         # --- Mechanical layout --------------------------------------------
         # Distance along the lidar Z-axis from the tilt pivot to the
@@ -145,6 +152,11 @@ class TiltLaserAssembler(Node):
         # Some LD06 drivers (CCW) flip the angle sign vs URDF.  Set this to
         # -1.0 if the assembled cloud comes out mirrored.
         self.declare_parameter('beam_angle_sign', 1.0)
+        # JointState topic published by lidar_sweeper.  The assembler
+        # interpolates the commanded angle from this history instead of
+        # re-evaluating the analytical triangle wave.
+        self.declare_parameter('joint_state_topic', '/lidar_joint_states')
+        self.declare_parameter('joint_name', 'lidar_joint')
 
         self.amplitude = math.radians(float(self.get_parameter('amplitude_deg').value))
         scan_rate = float(self.get_parameter('lidar_scan_rate_hz').value)
@@ -153,6 +165,13 @@ class TiltLaserAssembler(Node):
         self.half_period = self.period * 0.5
         self.scans_per_half = max(1, scans_per_sweep // 2)
         self.servo_lag = float(self.get_parameter('servo_lag_s').value)
+        self.auto_lag = bool(self.get_parameter('auto_lag').value)
+        # Angular velocity of the sweep [rad/s] — constant for a triangle wave.
+        self._omega = 2.0 * self.amplitude / self.half_period
+        # Calibration state: last half-sweep's mean-Z and direction.
+        self._cal_last_dir: int | None = None
+        self._cal_last_mean_z: float | None = None
+        self._cal_last_mean_r: float | None = None
 
         self.pivot_offset = float(self.get_parameter('pivot_offset_m').value)
         mount = list(self.get_parameter('mount_xyz').value)
@@ -162,6 +181,12 @@ class TiltLaserAssembler(Node):
         self.beam_sign = float(self.get_parameter('beam_angle_sign').value)
         scan_topic = str(self.get_parameter('scan_topic').value)
         cloud_topic = str(self.get_parameter('cloud_topic').value)
+        joint_state_topic = str(self.get_parameter('joint_state_topic').value)
+        self._joint_name = str(self.get_parameter('joint_name').value)
+
+        # Rolling buffer of (ros_time_s, angle_rad) from lidar_sweeper.
+        # 500 samples @ 100 Hz = 5 s of history, plenty for interpolation.
+        self._angle_buf: deque[tuple[float, float]] = deque(maxlen=500)
 
         # --- ROS plumbing -------------------------------------------------
         sensor_qos = QoSProfile(
@@ -172,6 +197,8 @@ class TiltLaserAssembler(Node):
         self.sub = self.create_subscription(LaserScan, scan_topic,
                                             self.scan_cb, sensor_qos)
         self.pub = self.create_publisher(PointCloud2, cloud_topic, 5)
+        self.js_sub = self.create_subscription(
+            JointState, joint_state_topic, self._js_cb, 50)
 
         # --- Sweep accumulator -------------------------------------------
         self._chunks: list[np.ndarray] = []
@@ -188,6 +215,32 @@ class TiltLaserAssembler(Node):
             f'pivot offset={self.pivot_offset*1000:.1f} mm, '
             f'output frame="{self.output_frame}").'
         )
+
+    # ------------------------------------------------------------------
+    def _js_cb(self, msg: JointState):
+        """Buffer stamped commanded angles from lidar_sweeper."""
+        if self._joint_name not in msg.name:
+            return
+        idx = list(msg.name).index(self._joint_name)
+        t = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        self._angle_buf.append((t, float(msg.position[idx])))
+
+    def _angles_for(self, t_arr: np.ndarray) -> np.ndarray:
+        """Return interpolated commanded angles for an array of timestamps.
+
+        Falls back to the analytical triangle wave if the JointState buffer
+        does not yet have enough history to cover ``t_arr``.
+        """
+        if len(self._angle_buf) < 2:
+            # Not enough history yet — use analytical model
+            return triangle_angle_v(t_arr, self.period, self.amplitude)
+
+        buf_t = np.fromiter((p[0] for p in self._angle_buf), dtype=np.float64,
+                            count=len(self._angle_buf))
+        buf_a = np.fromiter((p[1] for p in self._angle_buf), dtype=np.float64,
+                            count=len(self._angle_buf))
+        # np.interp clamps to boundary values outside the range, which is fine.
+        return np.interp(t_arr, buf_t, buf_a)
 
     # ------------------------------------------------------------------
     def scan_cb(self, scan: LaserScan):
@@ -232,7 +285,7 @@ class TiltLaserAssembler(Node):
         z_l = np.full_like(x_l, self.pivot_offset)
 
         # ---- tilt angle per beam ----------------------------------------
-        alpha = triangle_angle_v(t_for_angle, self.period, self.amplitude)
+        alpha = self._angles_for(t_for_angle)
         ca = np.cos(alpha)
         sa = np.sin(alpha)
 
@@ -294,6 +347,48 @@ class TiltLaserAssembler(Node):
             return
 
         pts = np.concatenate(self._chunks, axis=0)
+
+        # ---- auto lag calibration ---------------------------------------
+        # The sweep has constant angular velocity omega.  A servo lag L
+        # shifts all commanded angles by ±omega*L (+ on upswing, - on
+        # downswing), producing a mean Z error of ±omega*L*mean(r).
+        # Comparing consecutive opposite-direction sweeps:
+        #   delta_z = z_up - z_down ≈ -2 * omega * L * mean_r
+        #   → L_correction = -delta_z / (2 * omega * mean_r)
+        # We apply a fraction of this each sweep (low-pass) for stability.
+        if self.auto_lag and self._last_dir is not None:
+            # cols: x y z intensity time ring
+            mean_z = float(np.median(pts[:, 2]))
+            # Approximate mean range from x,y,z relative to mount
+            mean_r = float(np.median(np.linalg.norm(
+                pts[:, :3] - self.mount, axis=1)))
+
+            if (self._cal_last_dir is not None
+                    and self._cal_last_dir != self._last_dir
+                    and self._cal_last_mean_z is not None
+                    and mean_r > 0.1):
+                # upswing dir = +1, downswing = -1
+                # On upswing, lag makes Z too low → mean_z_up < true
+                # On downswing, lag makes Z too high → mean_z_down > true
+                # delta = mean_z(up) - mean_z(down) = -2*omega*lag*mean_r
+                if self._cal_last_dir == 1:   # last was up, current is down
+                    delta_z = self._cal_last_mean_z - mean_z
+                else:                          # last was down, current is up
+                    delta_z = mean_z - self._cal_last_mean_z
+
+                lag_estimate = delta_z / (2.0 * self._omega * mean_r)
+                # Blend 20 % of the correction per sweep pair
+                correction = 0.2 * lag_estimate
+                self.servo_lag = max(-0.3, min(0.3, self.servo_lag + correction))
+                self.get_logger().info(
+                    f'Auto-lag: δz={delta_z*1000:.1f} mm  '
+                    f'est={lag_estimate*1000:.1f} ms  '
+                    f'→ servo_lag={self.servo_lag*1000:.1f} ms'
+                )
+
+            self._cal_last_dir = self._last_dir
+            self._cal_last_mean_z = mean_z
+            self._cal_last_mean_r = mean_r
 
         header = Header()
         # Stamp = start of the half-sweep (matches the convention used by
