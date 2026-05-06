@@ -72,51 +72,47 @@ class ThermalConverter(Node):
         )
 
     def cb_capture(self):
-        try:
-            ok, frame = self.cap.read()
-            if not ok:
-                self.read_failures += 1
-                if self.read_failures % 30 == 1:
-                    self.get_logger().warning(f'No frame from {self.video_device} yet')
-                return
+        ok, frame = self.cap.read()
+        if not ok:
+            self.read_failures += 1
+            if self.read_failures % 30 == 1:
+                self.get_logger().warning(f'No frame from {self.video_device} yet')
+            return
 
-            self.frame_count += 1
-            raw = self.to_mono16(frame)
+        self.frame_count += 1
+        raw = self.to_mono16(frame)
 
-            # Konverter til float32 0..1
-            raw_f = raw.astype(np.float32) / 65535.0
+        # Konverter til float32 0..1
+        raw_f = raw.astype(np.float32) / 65535.0
 
-            # Mapper celsius til min/max
-            temp_c = self.min_temp + raw_f * (self.max_temp - self.min_temp)
+        # Mapper celsius til min/max
+        temp_c = self.min_temp + raw_f * (self.max_temp - self.min_temp)
 
-            # Pixel Korrigerering ved behov
-            if self.bad_pixel_correction:
-                # Median filter for enkel pikselkorrigering
-                temp_c = cv2.medianBlur(temp_c, 3)
+        # Pixel Korrigerering ved behov
+        if self.bad_pixel_correction:
+            # Median filter for enkel pikselkorrigering
+            temp_c = cv2.medianBlur(temp_c, 3)
 
-            # Publiserer bildet som 32-bit float med Celsius-verdier
-            out_msg = self.bridge.cv2_to_imgmsg(temp_c.astype(np.float32), encoding='32FC1')
-            out_msg.header.stamp = self.get_clock().now().to_msg()
-            out_msg.header.frame_id = 'thermal_camera'
-            self.pub.publish(out_msg)
+        # Publiserer bildet som 32-bit float med Celsius-verdier
+        out_msg = self.bridge.cv2_to_imgmsg(temp_c.astype(np.float32), encoding='32FC1')
+        out_msg.header.stamp = self.get_clock().now().to_msg()
+        out_msg.header.frame_id = 'thermal_camera'
+        self.pub.publish(out_msg)
 
-            if self.show_preview:
-                # Skaler Celsius-bildet til visning og legg på falske farger for enkel inspeksjon.
-                display_8u = cv2.normalize(temp_c, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-                preview = cv2.applyColorMap(display_8u, cv2.COLORMAP_INFERNO)
-                cv2.imshow(self.preview_window_name, preview)
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    self.get_logger().info('Preview closed by user (q), shutting down node')
-                    rclpy.shutdown()
+        if self.show_preview:
+            # Skaler Celsius-bildet til visning og legg på falske farger for enkel inspeksjon.
+            display_8u = cv2.normalize(temp_c, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+            preview = cv2.applyColorMap(display_8u, cv2.COLORMAP_INFERNO)
+            cv2.imshow(self.preview_window_name, preview)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                self.get_logger().info('Preview closed by user (q), shutting down node')
+                rclpy.shutdown()
 
-            if self.frame_count == 1:
-                self.get_logger().info(
-                    f'First frame received from {self.video_device} ({raw.shape[1]}x{raw.shape[0]})'
-                )
-
-        except Exception as e:
-            self.get_logger().error(f'Converter error: {e}')
+        if self.frame_count == 1:
+            self.get_logger().info(
+                f'First frame received from {self.video_device} ({raw.shape[1]}x{raw.shape[0]})'
+            )
 
     def to_mono16(self, frame):
         # Kamera kan levere ulike formater; normaliser til 16-bit mono for videre konvertering.
