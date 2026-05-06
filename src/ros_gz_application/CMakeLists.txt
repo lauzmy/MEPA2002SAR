@@ -22,6 +22,12 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+	nodes/lidar_settle_calibrator.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME lidar_settle_calibrator
+)
+
+install(PROGRAMS
 	nodes/YOLO.py
 	DESTINATION lib/${PROJECT_NAME}
 	RENAME YOLO
