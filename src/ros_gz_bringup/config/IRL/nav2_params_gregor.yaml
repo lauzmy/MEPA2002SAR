@@ -269,7 +269,7 @@ velocity_smoother:
     use_sim_time: False
     smoothing_frequency: 20.0
     scale_velocities: False
-    feedback: "CLOSED_LOOP"
+    feedback: "OPEN_LOOP"
     max_velocity: [0.5, 0.5, 2.0]  # [vx, vy, vtheta] in m/s
     min_velocity: [-0.5, -0.5, -2.0]
     max_accel: [1.5, 1.5, 3.0]
