@@ -51,8 +51,10 @@ def triangle_angle(t: float, period: float, amplitude: float) -> tuple[float, fl
 
 class LidarSweeper(Node):
     # --- Servo PWM calibration (50 Hz signal) ------------------------------
+    # Measured: 4.7 % = -45°, 7.2 % = 0°, 9.7 % = +45°
+    # → 2.5 % per 45° → 5.0 % per 90°
     PWM_CENTER = 7.2          # duty cycle (%) at neutral
-    PWM_RANGE_PER_90DEG = 2.5  # duty cycle delta per 90 deg
+    PWM_RANGE_PER_90DEG = 5.0  # duty cycle delta per 90 deg
 
     def __init__(self):
         super().__init__('lidar_sweeper')
