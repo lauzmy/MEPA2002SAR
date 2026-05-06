@@ -63,7 +63,6 @@ class SettleCalibrator(Node):
         # at the edge of the LD06 range.
         self.declare_parameter('max_range_m', 6.0)
 
-        self.sim = bool(self.get_parameter('sim').value)
         scan_topic = str(self.get_parameter('scan_topic').value)
         self.home_deg = float(self.get_parameter('home_deg').value)
         self.test_steps = [float(x) for x in
