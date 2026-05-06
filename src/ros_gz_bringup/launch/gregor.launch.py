@@ -141,7 +141,7 @@ def generate_launch_description():
     
     # Finn stien til Nav2 konfigurasjonsfilen
     # OBS: Sørg for at filnavnet matcher din faktiske config-fil
-    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'IRL', 'nav2_params_gregor.yaml')
+    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'IRL', 'nav2_params_smacHybrid.yaml')
 
     # Nav2 lanseringsbeskrivelse
     nav2 = IncludeLaunchDescription(
