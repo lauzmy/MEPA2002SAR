@@ -28,9 +28,10 @@ class ThermalConverter(Node):
         self.declare_parameter('force_y16', True)
         self.declare_parameter('frame_width', 160)
         self.declare_parameter('frame_height', 120)
-        self.declare_parameter('show_preview', False)
+        self.declare_parameter('show_preview', True)
         self.declare_parameter('preview_window_name', 'PureThermal3 Preview')
 
+        # Disse parametrene brukes til å konvertere rå termiske data (16-bit) til Celsius-verdier (float32)
         self.min_temp = float(self.get_parameter('min_temp_celsius').value)
         self.max_temp = float(self.get_parameter('max_temp_celsius').value)
         self.bad_pixel_correction = bool(self.get_parameter('bad_pixel_correction').value)
@@ -50,7 +51,7 @@ class ThermalConverter(Node):
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
         if self.force_y16:
-            # PureThermal3 gir ofte 16-bit rå termiske verdier via Y16 over V4L2.
+        # PureThermal3 gir ofte 16-bit rå termiske verdier via Y16 over V4L2.
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('Y', '1', '6', ' '))
         if not self.cap.isOpened():
             raise RuntimeError(f'Could not open video device: {self.video_device}')
