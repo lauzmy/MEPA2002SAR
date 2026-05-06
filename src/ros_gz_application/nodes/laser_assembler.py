@@ -1,82 +1,50 @@
 #!/usr/bin/env python3
-"""Assemble tilted LD06 LaserScans into a 3-D PointCloud2 for MOLA-LO.
+"""Assemble LD06 LaserScans into a 3-D PointCloud2 for SLAM.
 
-Pipeline per incoming /scan
----------------------------
-1.  For every beam ``i``:
-        t_i      = scan.header.stamp + i * scan.time_increment
-        alpha_i  = triangle( t_i ; period, amplitude )    # deterministic
-        p_laser  = ( r_i*cos(theta_i), r_i*sin(theta_i), 0 )
-        # Lidar optical centre is `pivot_offset` m above the hinge along
-        # the (rotating) lidar Z axis.  Tilting the hinge about Y rotates
-        # both the offset and the beam.
-        p_hinge  = R_y(alpha_i) @ ( p_laser + (0, 0, pivot_offset) )
-        p_body   = mount_xyz + p_hinge
+Pairs with ``lidar_sweeper.py`` (step-and-settle mode):
 
-2.  Push (x, y, z, intensity, t_rel, ring) into an accumulator, where
-    ``t_rel`` is the seconds offset from the *start* of the current
-    half-sweep and ``ring`` is the index of the scan within the sweep.
+  * The sweeper holds the tilt servo *stationary* at a known angle for
+    ``hold_time_s``.  ``/lidar_joint_states`` reflects that angle so
+    ``robot_state_publisher`` exposes the correct laser pose via TF.
+  * ``/lidar_hold_state`` is a ``std_msgs/Header`` whose ``frame_id`` is
+    ``"hold"`` or ``"settle"`` and whose ``stamp`` is the start of the
+    new phase.
 
-3.  When the half-sweep completes (servo direction reverses) publish a
-    PointCloud2 with fields  ``x y z intensity time ring``  in
-    ``output_frame`` (default base_footprint).  This is the layout MOLA-LO,
-    FAST-LIO, LIO-SAM etc. expect.
+This node simply:
 
-Angle source
-------------
-The assembler subscribes to the JointState topic published by lidar_sweeper
-(``joint_state_topic`` parameter, default ``/lidar_joint_states``) and keeps
-a rolling history of (timestamp, angle) pairs.  For each beam it interpolates
-the commanded angle at that beam's timestamp using numpy.interp.  This
-eliminates all phase-ambiguity from the analytical model.
+  1. Subscribes to ``/lidar_hold_state`` and remembers the current
+     phase + when it began.
+  2. For each incoming scan, accepts it iff the system is currently in
+     HOLD *and* the scan started after the hold began (with a small
+     ``settle_guard_s`` margin).
+  3. Looks up the static transform ``output_frame <- scan.frame_id``
+     from TF at the scan stamp and applies it to all valid beams.
+  4. Publishes a ``PointCloud2`` per scan with fields
+     ``x y z intensity time ring`` -- the layout FAST-LIO / MOLA-LO /
+     LIO-SAM expect.  ``time`` is per-beam offset from ``header.stamp``
+     (used for downstream motion compensation).
 
-The ``servo_lag_s`` parameter is still available to compensate for the servo's
-mechanical tracking lag (the delay between the command and physical motion).
-If the JointState topic is not available the node falls back to the analytical
-triangle wave.
+No analytical sweep model, no servo-lag PID, no manual rotation maths --
+everything is driven by TF and the hold-state gate.
 """
-
-import math
-from collections import deque
 
 import numpy as np
 import rclpy
+from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.time import Time
 
-from sensor_msgs.msg import JointState, LaserScan, PointCloud2, PointField
+from sensor_msgs.msg import LaserScan, PointCloud2, PointField
 from std_msgs.msg import Header
 
-
-# ---------------------------------------------------------------------------
-# Same triangle wave used by lidar_sweeper.py.  Kept inline (no import) so
-# the two nodes are decoupled at the package level.
-# ---------------------------------------------------------------------------
-def triangle_angle(t: float, period: float, amplitude: float) -> float:
-    if period <= 0.0:
-        return 0.0
-    phase = (t % period) / period
-    if phase < 0.5:
-        return amplitude * (4.0 * phase - 1.0)
-    return amplitude * (3.0 - 4.0 * phase)
-
-
-# Vectorised version for an array of timestamps
-def triangle_angle_v(t: np.ndarray, period: float, amplitude: float) -> np.ndarray:
-    if period <= 0.0:
-        return np.zeros_like(t)
-    phase = np.mod(t, period) / period
-    rising = phase < 0.5
-    out = np.empty_like(phase)
-    out[rising] = amplitude * (4.0 * phase[rising] - 1.0)
-    out[~rising] = amplitude * (3.0 - 4.0 * phase[~rising])
-    return out
+from tf2_ros import Buffer, TransformException, TransformListener
 
 
 # ---------------------------------------------------------------------------
 # PointCloud2 helpers (no laser_geometry / sensor_msgs_py dependency: we
-# build the message directly so we control the field layout exactly the way
-# MOLA-LO's generic PointCloud2 input expects).
+# build the message directly so we control the field layout exactly the
+# way generic LIO front-ends expect).
 # ---------------------------------------------------------------------------
 _FIELDS = [
     PointField(name='x',         offset=0,  datatype=PointField.FLOAT32, count=1),
@@ -86,29 +54,25 @@ _FIELDS = [
     PointField(name='time',      offset=16, datatype=PointField.FLOAT32, count=1),
     PointField(name='ring',      offset=20, datatype=PointField.UINT16,  count=1),
 ]
-_POINT_STEP = 24  # 4*5 + 2  (the trailing 2 bytes are part of the ring field)
+_POINT_STEP = 24  # 4*5 + 2  (the trailing 2 bytes pad the ring field)
+_POINT_DTYPE = np.dtype({
+    'names':    ['x', 'y', 'z', 'intensity', 'time', 'ring', '_pad'],
+    'formats':  ['<f4', '<f4', '<f4', '<f4', '<f4', '<u2', '<u2'],
+    'offsets':  [0, 4, 8, 12, 16, 20, 22],
+    'itemsize': _POINT_STEP,
+})
 
 
-def make_pointcloud2(header: Header, pts: np.ndarray) -> PointCloud2:
-    """Build a PointCloud2 from an (N, 6) float-ish array.
-
-    Columns: x, y, z, intensity, time, ring.
-    """
-    n = pts.shape[0]
-    # Build a structured numpy array with the exact memory layout above
-    dt = np.dtype({
-        'names':   ['x', 'y', 'z', 'intensity', 'time', 'ring', '_pad'],
-        'formats': ['<f4', '<f4', '<f4', '<f4', '<f4', '<u2', '<u2'],
-        'offsets': [0, 4, 8, 12, 16, 20, 22],
-        'itemsize': _POINT_STEP,
-    })
-    rec = np.empty(n, dtype=dt)
-    rec['x']         = pts[:, 0]
-    rec['y']         = pts[:, 1]
-    rec['z']         = pts[:, 2]
-    rec['intensity'] = pts[:, 3]
-    rec['time']      = pts[:, 4]
-    rec['ring']      = pts[:, 5].astype(np.uint16)
+def _make_pointcloud2(header: Header, xyz: np.ndarray, intensity: np.ndarray,
+                      t_rel: np.ndarray, ring: int) -> PointCloud2:
+    n = xyz.shape[0]
+    rec = np.empty(n, dtype=_POINT_DTYPE)
+    rec['x']         = xyz[:, 0]
+    rec['y']         = xyz[:, 1]
+    rec['z']         = xyz[:, 2]
+    rec['intensity'] = intensity
+    rec['time']      = t_rel
+    rec['ring']      = np.uint16(ring)
     rec['_pad']      = 0
 
     msg = PointCloud2()
@@ -124,328 +88,178 @@ def make_pointcloud2(header: Header, pts: np.ndarray) -> PointCloud2:
     return msg
 
 
+def _quat_to_rot(x: float, y: float, z: float, w: float) -> np.ndarray:
+    """Convert a unit quaternion to a 3x3 rotation matrix."""
+    xx, yy, zz = x * x, y * y, z * z
+    xy, xz, yz = x * y, x * z, y * z
+    wx, wy, wz = w * x, w * y, w * z
+    return np.array([
+        [1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz),       2.0 * (xz + wy)],
+        [2.0 * (xy + wz),       1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx)],
+        [2.0 * (xz - wy),       2.0 * (yz + wx),       1.0 - 2.0 * (xx + yy)],
+    ], dtype=np.float64)
+
+
 # ---------------------------------------------------------------------------
 class TiltLaserAssembler(Node):
+    PHASE_HOLD = 'hold'
+
     def __init__(self):
         super().__init__('tilt_laser_assembler')
 
-        # --- Sweep geometry (must match lidar_sweeper.py) -----------------
-        self.declare_parameter('amplitude_deg', 30.0)
-        self.declare_parameter('lidar_scan_rate_hz', 10.0)
-        self.declare_parameter('scans_per_sweep', 20)
-        self.declare_parameter('servo_lag_s', 0.0)         # measured servo delay
-        # When true the node estimates and corrects servo lag automatically by
-        # comparing mean Z between consecutive up/down half-sweeps.
-        self.declare_parameter('auto_lag', True)
-
-        # --- Mechanical layout --------------------------------------------
-        # Distance along the lidar Z-axis from the tilt pivot to the
-        # measurement plane of the LD06.
-        self.declare_parameter('pivot_offset_m', 0.0325)
-        # Mount position of the tilt pivot in the output frame.
-        self.declare_parameter('mount_xyz', [0.0, 0.0, 0.15])
-
-        # --- Topics / frames ----------------------------------------------
+        # ----- Topics / frames --------------------------------------------
         self.declare_parameter('scan_topic', '/scan')
         self.declare_parameter('cloud_topic', '/lidar3d/points')
+        self.declare_parameter('hold_state_topic', '/lidar_hold_state')
         self.declare_parameter('output_frame', 'base_footprint')
-        # Some LD06 drivers (CCW) flip the angle sign vs URDF.  Set this to
-        # -1.0 if the assembled cloud comes out mirrored.
-        self.declare_parameter('beam_angle_sign', 1.0)
-        # JointState topic published by lidar_sweeper.  The assembler
-        # interpolates the commanded angle from this history instead of
-        # re-evaluating the analytical triangle wave.
-        self.declare_parameter('joint_state_topic', '/lidar_joint_states')
-        self.declare_parameter('joint_name', 'lidar_joint')
 
-        self.amplitude = math.radians(float(self.get_parameter('amplitude_deg').value))
-        scan_rate = float(self.get_parameter('lidar_scan_rate_hz').value)
-        scans_per_sweep = int(self.get_parameter('scans_per_sweep').value)
-        self.period = scans_per_sweep / scan_rate
-        self.half_period = self.period * 0.5
-        self.scans_per_half = max(1, scans_per_sweep // 2)
-        self.servo_lag = float(self.get_parameter('servo_lag_s').value)
-        self.auto_lag = bool(self.get_parameter('auto_lag').value)
-        # Angular velocity of the sweep [rad/s] — constant for a triangle wave.
-        self._omega = 2.0 * self.amplitude / self.half_period
+        # ----- Gating ------------------------------------------------------
+        # Extra margin (on top of the sweeper's settle_time_s) before a
+        # newly-begun hold window starts accepting scans.  Useful if the
+        # servo has a small overshoot/oscillation tail that you want to
+        # discard.  0 = trust the sweeper.
+        self.declare_parameter('settle_guard_s', 0.02)
+        # TF lookup timeout.
+        self.declare_parameter('tf_timeout_s', 0.1)
 
-        # --- Lag PID state -----------------------------------------------
-        # Error signal: estimated lag (seconds) derived from the Z split
-        # between consecutive opposite-direction half-sweeps.
-        # Kp=0.15  Ki=0.02  Kd=0.01  (dt ≈ half_period)
-        self._pid_kp = 0.15
-        self._pid_ki = 0.02
-        self._pid_kd = 0.01
-        self._pid_integral = 0.0
-        self._pid_last_err: float | None = None
-        self._cal_last_dir: int | None = None
-        self._cal_last_floor_z: float | None = None
-        self._cal_last_mean_r: float | None = None
-
-        self.pivot_offset = float(self.get_parameter('pivot_offset_m').value)
-        mount = list(self.get_parameter('mount_xyz').value)
-        self.mount = np.array([float(mount[0]), float(mount[1]), float(mount[2])])
-
-        self.output_frame = str(self.get_parameter('output_frame').value)
-        self.beam_sign = float(self.get_parameter('beam_angle_sign').value)
         scan_topic = str(self.get_parameter('scan_topic').value)
         cloud_topic = str(self.get_parameter('cloud_topic').value)
-        joint_state_topic = str(self.get_parameter('joint_state_topic').value)
-        self._joint_name = str(self.get_parameter('joint_name').value)
+        hold_topic = str(self.get_parameter('hold_state_topic').value)
+        self.output_frame = str(self.get_parameter('output_frame').value)
+        self._settle_guard = float(self.get_parameter('settle_guard_s').value)
+        self._tf_timeout = Duration(
+            seconds=float(self.get_parameter('tf_timeout_s').value))
 
-        # Rolling buffer of (ros_time_s, angle_rad) from lidar_sweeper.
-        # 500 samples @ 100 Hz = 5 s of history, plenty for interpolation.
-        self._angle_buf: deque[tuple[float, float]] = deque(maxlen=500)
+        # ----- TF ----------------------------------------------------------
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(self._tf_buffer, self)
 
-        # --- ROS plumbing -------------------------------------------------
+        # ----- Hold-state gate --------------------------------------------
+        self._in_hold = False
+        self._hold_started: Time | None = None
+        # ring counter wraps at 2**16 (fits PointField.UINT16); useful for
+        # downstream tools that treat consecutive clouds as separate beams.
+        self._ring = 0
+        # Counters for diagnostics.
+        self._n_accepted = 0
+        self._n_rejected_settle = 0
+        self._n_rejected_tf = 0
+
+        # ----- ROS plumbing -----------------------------------------------
         sensor_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10,
         )
-        self.sub = self.create_subscription(LaserScan, scan_topic,
-                                            self.scan_cb, sensor_qos)
+        self.create_subscription(LaserScan, scan_topic, self._on_scan, sensor_qos)
+        self.create_subscription(Header, hold_topic, self._on_hold_state, 10)
         self.pub = self.create_publisher(PointCloud2, cloud_topic, 5)
-        self.js_sub = self.create_subscription(
-            JointState, joint_state_topic, self._js_cb, 50)
 
-        # --- Sweep accumulator -------------------------------------------
-        self._chunks: list[np.ndarray] = []
-        self._sweep_start_t: float | None = None  # ROS seconds
-        self._ring_idx = 0
-        # Direction we were going during the last processed scan
-        # (+1 rising, -1 falling). None until first scan.
-        self._last_dir: int | None = None
+        # Periodic stats (helps tuning settle_time_s without spamming).
+        self.create_timer(5.0, self._log_stats)
 
         self.get_logger().info(
-            f'Tilt laser assembler ready '
-            f'(±{math.degrees(self.amplitude):.1f}°, '
-            f'period={self.period:.3f}s, '
-            f'pivot offset={self.pivot_offset*1000:.1f} mm, '
-            f'output frame="{self.output_frame}").'
+            f'Assembler ready: scan="{scan_topic}" -> cloud="{cloud_topic}" '
+            f'in frame "{self.output_frame}", '
+            f'settle_guard={self._settle_guard*1000:.0f} ms.'
         )
 
     # ------------------------------------------------------------------
-    def _js_cb(self, msg: JointState):
-        """Buffer stamped commanded angles from lidar_sweeper."""
-        if self._joint_name not in msg.name:
-            return
-        idx = list(msg.name).index(self._joint_name)
-        t = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-        self._angle_buf.append((t, float(msg.position[idx])))
-
-    def _angles_for(self, t_arr: np.ndarray) -> np.ndarray:
-        """Return interpolated commanded angles for an array of timestamps.
-
-        Falls back to the analytical triangle wave if the JointState buffer
-        does not yet have enough history to cover ``t_arr``.
-        """
-        if len(self._angle_buf) < 2:
-            # Not enough history yet — use analytical model
-            return triangle_angle_v(t_arr, self.period, self.amplitude)
-
-        buf_t = np.fromiter((p[0] for p in self._angle_buf), dtype=np.float64,
-                            count=len(self._angle_buf))
-        buf_a = np.fromiter((p[1] for p in self._angle_buf), dtype=np.float64,
-                            count=len(self._angle_buf))
-        # np.interp clamps to boundary values outside the range, which is fine.
-        return np.interp(t_arr, buf_t, buf_a)
+    def _on_hold_state(self, msg: Header) -> None:
+        new_in_hold = (msg.frame_id == self.PHASE_HOLD)
+        if new_in_hold and not self._in_hold:
+            self._hold_started = Time.from_msg(msg.stamp)
+        self._in_hold = new_in_hold
 
     # ------------------------------------------------------------------
-    def scan_cb(self, scan: LaserScan):
+    def _on_scan(self, scan: LaserScan) -> None:
+        # ---- gate on hold phase -----------------------------------------
+        if not self._in_hold or self._hold_started is None:
+            self._n_rejected_settle += 1
+            return
+        scan_stamp = Time.from_msg(scan.header.stamp)
+        guard_ns = int(self._settle_guard * 1e9)
+        if (scan_stamp - self._hold_started).nanoseconds < guard_ns:
+            self._n_rejected_settle += 1
+            return
+
+        # ---- valid beams -------------------------------------------------
         n = len(scan.ranges)
         if n == 0:
             return
-
-        # ---- per-beam timestamps (ROS seconds, float64) ------------------
-        t0 = scan.header.stamp.sec + scan.header.stamp.nanosec * 1e-9
-        # Fall back to a sensible time_increment if the driver leaves it 0.
-        dt = scan.time_increment
-        if dt <= 0.0:
-            dt = (1.0 / 10.0) / max(1, n)  # 10 Hz scan rate
-        beam_idx = np.arange(n, dtype=np.float64)
-        t_beam = t0 + beam_idx * dt           # 1D, length n
-        t_for_angle = t_beam - self.servo_lag  # compensate servo transport delay
-
-        # ---- beam geometry ----------------------------------------------
         ranges = np.asarray(scan.ranges, dtype=np.float64)
-        if scan.intensities and len(scan.intensities) == n:
-            inten = np.asarray(scan.intensities, dtype=np.float64)
-        else:
-            inten = np.zeros(n, dtype=np.float64)
-
-        theta = (scan.angle_min
-                 + beam_idx * scan.angle_increment) * self.beam_sign
-
-        valid = np.isfinite(ranges) & (ranges >= scan.range_min) & (ranges <= scan.range_max)
+        valid = (np.isfinite(ranges)
+                 & (ranges >= scan.range_min)
+                 & (ranges <= scan.range_max))
         if not np.any(valid):
             return
 
+        beam_idx = np.arange(n, dtype=np.float64)
+        theta = scan.angle_min + beam_idx * scan.angle_increment
+
+        # Per-beam time offset relative to header.stamp (for SLAM deskew).
+        dt = scan.time_increment
+        if dt <= 0.0:
+            dt = (1.0 / 10.0) / max(1, n)  # 10 Hz LD06 fallback
+        t_rel_full = beam_idx * dt
+
         ranges = ranges[valid]
-        inten = inten[valid]
         theta = theta[valid]
-        t_beam = t_beam[valid]
-        t_for_angle = t_for_angle[valid]
+        t_rel = t_rel_full[valid].astype(np.float32)
 
-        # Point in the (rotating) lidar frame: x fwd, y left, z up, z=0
-        x_l = ranges * np.cos(theta)
-        y_l = ranges * np.sin(theta)
-        # Add the pivot-to-optical-centre offset along lidar Z
-        z_l = np.full_like(x_l, self.pivot_offset)
+        if scan.intensities and len(scan.intensities) == n:
+            intensity = np.asarray(scan.intensities, dtype=np.float32)[valid]
+        else:
+            intensity = np.zeros(ranges.size, dtype=np.float32)
 
-        # ---- tilt angle per beam ----------------------------------------
-        alpha = self._angles_for(t_for_angle)
-        ca = np.cos(alpha)
-        sa = np.sin(alpha)
-
-        # Rotate about Y:  R_y(-alpha) = [ca 0 -sa; 0 1 0; sa 0 ca] @ [x;y;z]
-        # Servo tilts nose-up for positive alpha, but the physical Y-axis is
-        # mirrored relative to standard R_y, so we negate alpha.
-        x_h = ca * x_l - sa * z_l
-        y_h = y_l
-        z_h = sa * x_l + ca * z_l
-
-        # Translate into the output (body) frame
-        x_b = x_h + self.mount[0]
-        y_b = y_h + self.mount[1]
-        z_b = z_h + self.mount[2]
-
-        # ---- accumulate --------------------------------------------------
-        if self._sweep_start_t is None:
-            self._sweep_start_t = float(t_beam[0])
-            self._ring_idx = 0
-            self._chunks.clear()
-
-        t_rel = (t_beam - self._sweep_start_t).astype(np.float32)
-        ring = np.full(t_rel.shape, self._ring_idx, dtype=np.float32)
-
-        chunk = np.column_stack((
-            x_b.astype(np.float32),
-            y_b.astype(np.float32),
-            z_b.astype(np.float32),
-            inten.astype(np.float32),
-            t_rel,
-            ring,
-        ))
-        self._chunks.append(chunk)
-        self._ring_idx += 1
-
-        # ---- detect end of half-sweep -----------------------------------
-        # We use the analytical wave to know which direction we are in.
-        # When the direction flips, the half-sweep just finished -> publish.
-        t_mid = float(t_beam[n // 2 if n // 2 < len(t_beam) else -1] - self.servo_lag)
-        cur_dir = self._direction_at(t_mid)
-
-        if self._last_dir is not None and cur_dir != self._last_dir:
-            self._publish_and_reset(t_beam[0])
-        elif self._ring_idx >= self.scans_per_half * 2:
-            # Safety net: if we somehow miss a direction flip, flush after
-            # a full sweep worth of scans.
-            self._publish_and_reset(t_beam[0])
-
-        self._last_dir = cur_dir
-
-    # ------------------------------------------------------------------
-    def _direction_at(self, t: float) -> int:
-        phase = (t % self.period) / self.period
-        return 1 if phase < 0.5 else -1
-
-    def _publish_and_reset(self, end_stamp_s: float):
-        if not self._chunks:
-            self._sweep_start_t = None
+        # ---- TF lookup (servo is stationary, so any time inside the
+        #      hold window gives the same transform; use scan.stamp) ------
+        try:
+            tf = self._tf_buffer.lookup_transform(
+                self.output_frame, scan.header.frame_id,
+                scan_stamp, timeout=self._tf_timeout)
+        except TransformException as e:
+            self._n_rejected_tf += 1
+            self.get_logger().warn(
+                f'TF lookup {self.output_frame} <- {scan.header.frame_id} '
+                f'failed: {e}', throttle_duration_sec=2.0)
             return
 
-        pts = np.concatenate(self._chunks, axis=0)
+        # ---- transform beams into output frame ---------------------------
+        x_l = ranges * np.cos(theta)
+        y_l = ranges * np.sin(theta)
+        pts_local = np.stack([x_l, y_l, np.zeros_like(x_l)], axis=1)
 
-        # ---- auto lag PID -----------------------------------------------
-        # Use only the lowest 20 % of points by Z as the "floor" sample —
-        # these are dominated by ground returns which should be at Z≈0
-        # regardless of sweep direction.  The error signal is the difference
-        # in floor Z between consecutive opposite-direction half-sweeps,
-        # converted to a lag estimate via the sweep angular velocity.
-        if self.auto_lag and self._last_dir is not None:
-            # Floor detection: use points within a narrow absolute Z band
-            # just above ground (0 ± 60 mm in base_footprint).  This is much
-            # more reliable than a percentile when the cloud is skewed, because
-            # the band is defined in world coordinates and doesn't move with
-            # the error.  Requires at least 20 points to proceed.
-            floor_mask = (pts[:, 2] >= -0.06) & (pts[:, 2] <= 0.06)
-            if floor_mask.sum() >= 20:
-                floor_z = float(np.median(pts[floor_mask, 2]))
-                mean_r = float(np.median(
-                    np.linalg.norm(pts[floor_mask, :3] - self.mount, axis=1)))
+        q = tf.transform.rotation
+        t = tf.transform.translation
+        R = _quat_to_rot(q.x, q.y, q.z, q.w)
+        translation = np.array([t.x, t.y, t.z], dtype=np.float64)
+        pts_out = pts_local @ R.T + translation
 
-                if (self._cal_last_dir is not None
-                        and self._cal_last_dir != self._last_dir
-                        and self._cal_last_floor_z is not None
-                        and mean_r > 0.1):
-
-                    if self._cal_last_dir == 1:   # last=up, current=down
-                        delta_z = self._cal_last_floor_z - floor_z
-                    else:                          # last=down, current=up
-                        delta_z = floor_z - self._cal_last_floor_z
-
-                    lag_err = delta_z / (2.0 * self._omega * mean_r)
-
-                    # PID
-                    self._pid_integral += lag_err * self.half_period
-                    self._pid_integral = max(-0.1, min(0.1, self._pid_integral))
-                    derivative = 0.0
-                    if self._pid_last_err is not None:
-                        derivative = (lag_err - self._pid_last_err) / self.half_period
-                    self._pid_last_err = lag_err
-
-                    correction = (self._pid_kp * lag_err
-                                  + self._pid_ki * self._pid_integral
-                                  + self._pid_kd * derivative)
-                    # Cap correction to ±10 ms per step to prevent wind-up
-                    correction = max(-0.010, min(0.010, correction))
-                    self.servo_lag = max(-0.15, min(0.15,
-                                                    self.servo_lag + correction))
-                    self.get_logger().info(
-                        f'Auto-lag PID: δz={delta_z*1000:.1f} mm  '
-                        f'err={lag_err*1000:.1f} ms  '
-                        f'corr={correction*1000:.2f} ms  '
-                        f'→ servo_lag={self.servo_lag*1000:.1f} ms'
-                    )
-                else:
-                    self.get_logger().debug(
-                        f'Auto-lag: waiting for opposite sweep '
-                        f'(last_dir={self._cal_last_dir}, '
-                        f'cur_dir={self._last_dir})'
-                    )
-
-                self._cal_last_dir = self._last_dir
-                self._cal_last_floor_z = floor_z
-                self._cal_last_mean_r = mean_r
-            else:
-                self.get_logger().debug(
-                    f'Auto-lag: only {floor_mask.sum()} floor pts '
-                    f'(need 20) — skipping this sweep'
-                )
-
+        # ---- publish -----------------------------------------------------
         header = Header()
-        # Stamp = start of the half-sweep (matches the convention used by
-        # FAST-LIO / MOLA-LO: per-point `time` is offset from header.stamp).
-        sec = int(self._sweep_start_t)
-        nsec = int(round((self._sweep_start_t - sec) * 1e9))
-        header.stamp.sec = sec
-        header.stamp.nanosec = nsec
+        header.stamp = scan.header.stamp
         header.frame_id = self.output_frame
-
-        cloud = make_pointcloud2(header, pts)
+        cloud = _make_pointcloud2(
+            header, pts_out.astype(np.float32), intensity, t_rel, self._ring)
         self.pub.publish(cloud)
 
-        self.get_logger().info(
-            f'Published 3-D cloud: {pts.shape[0]} pts, '
-            f'{self._ring_idx} rings, '
-            f'span={pts[:, 4].max():.3f}s.'
-        )
+        self._ring = (self._ring + 1) & 0xFFFF
+        self._n_accepted += 1
 
-        # reset for next half-sweep
-        self._chunks.clear()
-        self._sweep_start_t = None
-        self._ring_idx = 0
+    # ------------------------------------------------------------------
+    def _log_stats(self) -> None:
+        total = self._n_accepted + self._n_rejected_settle + self._n_rejected_tf
+        if total == 0:
+            return
+        self.get_logger().info(
+            f'5s window: accepted={self._n_accepted}  '
+            f'rejected[settle]={self._n_rejected_settle}  '
+            f'rejected[tf]={self._n_rejected_tf}'
+        )
+        self._n_accepted = 0
+        self._n_rejected_settle = 0
+        self._n_rejected_tf = 0
 
 
 def main(args=None):

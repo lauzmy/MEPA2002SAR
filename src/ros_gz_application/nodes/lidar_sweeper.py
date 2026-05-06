@@ -1,22 +1,34 @@
 #!/usr/bin/env python3
-"""Tilt-servo controller for the LD06 2D-LiDAR.
+"""Step-and-settle tilt controller for the LD06 2-D LiDAR.
 
-Sweeps the lidar pitch with a *triangle* wave so the angular velocity is
-constant.  The period is locked to an integer number of full LD06 scans
-(10 Hz) so every sweep contains exactly the same set of scan stamps.
+Instead of sweeping continuously (which leaves the servo permanently
+"behind" its commanded angle and bobs the assembled cloud up and down),
+this driver advances the servo in discrete steps:
 
-The instantaneous tilt angle is a deterministic function of ROS time:
+    1. Command the next angle.
+    2. Wait ``settle_time_s`` for the servo to physically arrive.
+    3. Hold for ``hold_time_s`` -- long enough for the LD06 (10 Hz) to
+       complete at least one full revolution.  Any LaserScan whose stamp
+       falls inside this window has been captured at a known, *static*
+       tilt angle.
+    4. Repeat with the next angle in a triangle staircase.
 
-    alpha(t) = triangle( (t - t0) / period ) * amplitude
+Two topics let the assembler tell the two phases apart:
 
-Because both this node and the assembler use the same equation, no
-message synchronisation between them is needed - the assembler can ask
-"what was the tilt at the timestamp of this beam?" without any TF/topic
-look-up.
+    /lidar_joint_states  (sensor_msgs/JointState, ~50 Hz)
+        The currently commanded angle.  Drives ``robot_state_publisher``
+        and TF.  During SETTLE the servo is mid-flight so this is briefly
+        ahead of reality -- the assembler simply ignores scans during
+        SETTLE, so TF is always queried while the servo is stationary.
 
-The same angle is also published as a JointState (for robot_state_publisher
-and RViz) and as a Float64 on /lidar_cmd_pos (used by the Gazebo bridge in
-simulation).
+    /lidar_hold_state    (std_msgs/Header, on every transition)
+        ``frame_id`` is either ``"hold"`` or ``"settle"``.  ``stamp`` is
+        the time the new phase began.  The assembler uses this to gate
+        which scans it processes.
+
+In simulation (``sim:=true``) the hardware PWM is skipped and the node
+publishes only the command/state topics so the Gazebo bridge can drive
+the joint.
 """
 
 import math
@@ -26,72 +38,75 @@ import rclpy
 from rclpy.node import Node
 
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Header
 
 
-def triangle_angle(t: float, period: float, amplitude: float) -> tuple[float, float]:
-    """Return (angle [rad], angular_velocity [rad/s]) at time ``t``.
-
-    A symmetric triangle wave of full period ``period`` and peak ``amplitude``,
-    starting at ``-amplitude`` for ``t = 0`` and rising linearly.
-    """
-    if period <= 0.0:
-        return 0.0, 0.0
-    phase = (t % period) / period  # in [0, 1)
-    if phase < 0.5:
-        # rising:  -A  ->  +A
-        angle = amplitude * (4.0 * phase - 1.0)
-        ang_vel = 4.0 * amplitude / period
-    else:
-        # falling: +A  ->  -A
-        angle = amplitude * (3.0 - 4.0 * phase)
-        ang_vel = -4.0 * amplitude / period
-    return angle, ang_vel
+def _build_staircase(min_rad: float, max_rad: float, step_rad: float) -> list[float]:
+    """Triangle staircase from min->max->min, no duplicated endpoints."""
+    if step_rad <= 0.0 or max_rad <= min_rad:
+        return [0.0]
+    n_up = max(1, int(round((max_rad - min_rad) / step_rad)))
+    up = [min_rad + i * (max_rad - min_rad) / n_up for i in range(n_up + 1)]
+    # Drop both endpoints on the way down so they aren't held twice in a row.
+    down = list(reversed(up))[1:-1]
+    return up + down
 
 
 class LidarSweeper(Node):
     # --- Servo PWM calibration (50 Hz signal) ------------------------------
-    # Measured: 4.7 % = -45°, 7.2 % = 0°, 9.7 % = +45°
-    # → 2.5 % per 45° → 5.0 % per 90°
-    PWM_CENTER = 7.2          # duty cycle (%) at neutral
-    PWM_RANGE_PER_90DEG = 5.0  # duty cycle delta per 90 deg
+    # Measured: 4.7 % = -45 deg, 7.2 % = 0 deg, 9.7 % = +45 deg
+    PWM_CENTER = 7.2                  # duty cycle (%) at neutral
+    PWM_PERCENT_PER_DEG = 5.0 / 90.0  # duty-cycle delta per degree
+
+    # /lidar_hold_state frame_id values
+    PHASE_SETTLE = 'settle'
+    PHASE_HOLD = 'hold'
 
     def __init__(self):
         super().__init__('lidar_sweeper')
 
         # ----- Parameters --------------------------------------------------
         self.declare_parameter('sim', False)
-        self.declare_parameter('amplitude_deg', 30.0)
-        # The LD06 publishes scans at 10 Hz.  One full sweep period
-        # (down AND back up) is locked to ``scans_per_sweep`` scans, so
-        # each half-sweep contains exactly ``scans_per_sweep / 2`` scans
-        # at evenly spaced tilt angles.
-        self.declare_parameter('lidar_scan_rate_hz', 10.0)
-        self.declare_parameter('scans_per_sweep', 20)
+        self.declare_parameter('min_angle_deg', -30.0)
+        self.declare_parameter('max_angle_deg', 30.0)
+        self.declare_parameter('step_deg', 3.0)
+        # Time allowed for the servo to physically reach the new angle.
+        # Tune up until stationary objects stop bobbing in RViz.
+        self.declare_parameter('settle_time_s', 0.08)
+        # Time the servo is held still while scans are captured.  Must be
+        # >= one LD06 revolution (100 ms @ 10 Hz) plus a small safety
+        # margin so at least one full scan starts AND ends inside the
+        # window.
+        self.declare_parameter('hold_time_s', 0.15)
+        self.declare_parameter('joint_state_rate_hz', 50.0)
         self.declare_parameter('joint_name', 'lidar_joint')
-        # Topic merged into /joint_states by joint_state_publisher source_list
         self.declare_parameter('joint_state_topic', '/lidar_joint_states')
-        # Servo command topic (used by the Gazebo bridge in sim)
+        self.declare_parameter('hold_state_topic', '/lidar_hold_state')
         self.declare_parameter('cmd_topic', '/lidar_cmd_pos')
-        self.declare_parameter('control_rate_hz', 100.0)
-        self.declare_parameter('min_angle_deg', -45.0)
-        self.declare_parameter('max_angle_deg', 45.0)
 
         self.sim = bool(self.get_parameter('sim').value)
-        self.amplitude = math.radians(float(self.get_parameter('amplitude_deg').value))
-        scan_rate = float(self.get_parameter('lidar_scan_rate_hz').value)
-        scans_per_sweep = int(self.get_parameter('scans_per_sweep').value)
-        self.period = scans_per_sweep / scan_rate  # seconds, full triangle period
+        a_min = math.radians(float(self.get_parameter('min_angle_deg').value))
+        a_max = math.radians(float(self.get_parameter('max_angle_deg').value))
+        step = math.radians(float(self.get_parameter('step_deg').value))
+        self.settle_time = float(self.get_parameter('settle_time_s').value)
+        self.hold_time = float(self.get_parameter('hold_time_s').value)
         self.joint_name = str(self.get_parameter('joint_name').value)
-        self.cmd_topic = str(self.get_parameter('cmd_topic').value)
-        joint_state_topic = str(self.get_parameter('joint_state_topic').value)
-        ctrl_rate = float(self.get_parameter('control_rate_hz').value)
-        self.angle_min = math.radians(float(self.get_parameter('min_angle_deg').value))
-        self.angle_max = math.radians(float(self.get_parameter('max_angle_deg').value))
+        js_topic = str(self.get_parameter('joint_state_topic').value)
+        hold_topic = str(self.get_parameter('hold_state_topic').value)
+        cmd_topic = str(self.get_parameter('cmd_topic').value)
+        js_rate = float(self.get_parameter('joint_state_rate_hz').value)
+
+        self._angles = _build_staircase(a_min, a_max, step)
+        self._idx = 0
+        self._phase = self.PHASE_SETTLE
+        self._phase_t0 = self._now_s()
 
         # ----- Publishers --------------------------------------------------
-        self.cmd_pub = self.create_publisher(Float64, self.cmd_topic, 10)
-        self.js_pub = self.create_publisher(JointState, joint_state_topic, 10)
+        self.cmd_pub = self.create_publisher(Float64, cmd_topic, 10)
+        self.js_pub = self.create_publisher(JointState, js_topic, 10)
+        # Latch-style QoS would be nicer but Header doesn't justify a
+        # custom QoS profile; just publish on every transition.
+        self.hold_pub = self.create_publisher(Header, hold_topic, 10)
 
         # ----- Hardware PWM (real robot only) ------------------------------
         self.pwm = None
@@ -105,57 +120,74 @@ class LidarSweeper(Node):
                 self.get_logger().info('Hardware PWM initialised (channel 0, 50 Hz)')
             except Exception as e:  # noqa: BLE001
                 self.get_logger().error(
-                    f'Could not init hardware PWM ({e}); running in command-only mode.'
+                    f'Could not init hardware PWM ({e}); running command-only.'
                 )
                 self.pwm = None
         else:
-            self.get_logger().info('Running in simulation mode - PWM disabled')
+            self.get_logger().info('Simulation mode - PWM disabled')
 
-        # ----- Sweep epoch -------------------------------------------------
-        # Both this node and the assembler evaluate triangle(t % period), where
-        # t is absolute ROS time (seconds).  Using absolute time is critical:
-        # if this node used a relative epoch (clock.now() - t0) the two nodes
-        # would be phase-shifted by (t0 % period), producing wrong tilt angles
-        # in the assembler and a vertically-flipped or sheared point cloud.
+        # Command the first angle and announce the initial settle phase.
+        self._command_servo(self._angles[self._idx])
+        self._publish_phase(self.PHASE_SETTLE)
+
+        # ----- Timers ------------------------------------------------------
+        # Phase state machine runs much faster than the phase durations so
+        # the transition timing is accurate.
+        self._state_timer = self.create_timer(0.005, self._state_tick)
+        # Continuous JointState publish keeps TF fresh for RViz / SLAM.
+        self._js_timer = self.create_timer(1.0 / js_rate, self._publish_js)
 
         self.get_logger().info(
-            f'Sweep: ±{math.degrees(self.amplitude):.1f}°, '
-            f'period={self.period:.3f}s '
-            f'({scans_per_sweep} scans @ {scan_rate:g} Hz, '
-            f'half-sweep = {self.period/2:.3f}s).'
+            f'Sweep staircase: {len(self._angles)} steps '
+            f'({math.degrees(a_min):+.1f} to {math.degrees(a_max):+.1f} deg, '
+            f'step {math.degrees(step):.2f} deg), '
+            f'settle={self.settle_time*1000:.0f} ms, '
+            f'hold={self.hold_time*1000:.0f} ms, '
+            f'cycle={(self.settle_time+self.hold_time)*len(self._angles):.2f} s.'
         )
 
-        self.timer = self.create_timer(1.0 / ctrl_rate, self.tick)
+    # ------------------------------------------------------------------
+    def _now_s(self) -> float:
+        return self.get_clock().now().nanoseconds * 1e-9
+
+    def _state_tick(self) -> None:
+        elapsed = self._now_s() - self._phase_t0
+        if self._phase == self.PHASE_SETTLE and elapsed >= self.settle_time:
+            self._enter_hold()
+        elif self._phase == self.PHASE_HOLD and elapsed >= self.hold_time:
+            self._enter_settle()
+
+    def _enter_hold(self) -> None:
+        self._phase = self.PHASE_HOLD
+        self._phase_t0 = self._now_s()
+        self._publish_phase(self.PHASE_HOLD)
+
+    def _enter_settle(self) -> None:
+        self._idx = (self._idx + 1) % len(self._angles)
+        self._command_servo(self._angles[self._idx])
+        self._phase = self.PHASE_SETTLE
+        self._phase_t0 = self._now_s()
+        self._publish_phase(self.PHASE_SETTLE)
 
     # ------------------------------------------------------------------
-    def _t_now(self) -> float:
-        now = self.get_clock().now()
-        return now.nanoseconds * 1e-9
+    def _publish_phase(self, phase: str) -> None:
+        h = Header()
+        h.stamp = self.get_clock().now().to_msg()
+        h.frame_id = phase
+        self.hold_pub.publish(h)
 
-    def tick(self):
-        t = self._t_now()
-        angle, _vel = triangle_angle(t, self.period, self.amplitude)
-        # Hard clamp (in case parameters are misconfigured)
-        if angle < self.angle_min:
-            angle = self.angle_min
-        elif angle > self.angle_max:
-            angle = self.angle_max
-
-        stamp = self.get_clock().now().to_msg()
-
-        # 1) Command for Gazebo bridge / logging
-        self.cmd_pub.publish(Float64(data=angle))
-
-        # 2) JointState for TF (robot_state_publisher)
+    def _publish_js(self) -> None:
         js = JointState()
-        js.header.stamp = stamp
+        js.header.stamp = self.get_clock().now().to_msg()
         js.name = [self.joint_name]
-        js.position = [angle]
+        js.position = [self._angles[self._idx]]
+        js.velocity = [0.0]
         self.js_pub.publish(js)
 
-        # 3) Drive the servo
+    def _command_servo(self, angle_rad: float) -> None:
+        self.cmd_pub.publish(Float64(data=angle_rad))
         if self.pwm is not None:
-            duty = self.PWM_CENTER + math.degrees(angle) * self.PWM_RANGE_PER_90DEG / 90.0
+            duty = self.PWM_CENTER + math.degrees(angle_rad) * self.PWM_PERCENT_PER_DEG
             self.pwm.change_duty_cycle(duty)
 
     # ------------------------------------------------------------------
