@@ -51,4 +51,10 @@ install(PROGRAMS
 	RENAME thermal_converter
 )
 
+install(PROGRAMS
+	nodes/thermal_processing.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME thermal_processing
+)
+
 ament_package()

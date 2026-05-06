@@ -112,6 +112,20 @@ def generate_launch_description():
         ]   
     )
 
+    thermal_processor = Node(
+        package = 'ros_gz_application',
+        executable = 'thermal_processing',
+        name = 'thermal_processor',
+        output = 'screen',
+        parameters=[
+                {'min_temp_celsius': 20.0},
+                {'max_temp_celsius': 100.0},
+                {'temp_bins': [20.0, 35.0, 40.0, 50.0, 60.0]},
+                {'num_top_spots': 3}
+        ]
+    )
+        
+
     # 5. Lokalisering & Autonomi
     ekf_node = Node(
         package='robot_localization',

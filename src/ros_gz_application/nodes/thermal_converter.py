@@ -10,7 +10,7 @@ import numpy as np
 
 class ThermalConverter(Node):
     
-    "Konverterer rå termiske bilder (16-bit mono) til Celsius (32-bit float) basert på kalibrering"
+    "Converts raw thermal images (16-bit mono) to Celsius (32-bit float) based on calibration"
     
     def __init__(self):
         super().__init__('thermal_converter')
@@ -18,7 +18,7 @@ class ThermalConverter(Node):
         self.frame_count = 0
         self.read_failures = 0
 
-        # Parametere for kalibrering av termiske bilder
+        # Parametere for calibration and konvertering
         self.declare_parameter('min_temp_celsius', 20.0)
         self.declare_parameter('max_temp_celsius', 100.0)
         self.declare_parameter('bad_pixel_correction', False)
@@ -31,7 +31,8 @@ class ThermalConverter(Node):
         self.declare_parameter('show_preview', True)
         self.declare_parameter('preview_window_name', 'PureThermal3 Preview')
 
-        # Disse parametrene brukes til å konvertere rå termiske data (16-bit) til Celsius-verdier (float32)
+        
+        # Read parameters for conversion of raw thermal values (16-bit) to Celsius (32-bit float)
         self.min_temp = float(self.get_parameter('min_temp_celsius').value)
         self.max_temp = float(self.get_parameter('max_temp_celsius').value)
         self.bad_pixel_correction = bool(self.get_parameter('bad_pixel_correction').value)
