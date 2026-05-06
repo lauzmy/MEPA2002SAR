@@ -168,9 +168,18 @@ class TiltLaserAssembler(Node):
         self.auto_lag = bool(self.get_parameter('auto_lag').value)
         # Angular velocity of the sweep [rad/s] — constant for a triangle wave.
         self._omega = 2.0 * self.amplitude / self.half_period
-        # Calibration state: last half-sweep's mean-Z and direction.
+
+        # --- Lag PID state -----------------------------------------------
+        # Error signal: estimated lag (seconds) derived from the Z split
+        # between consecutive opposite-direction half-sweeps.
+        # Kp=0.6  Ki=0.08  Kd=0.04  (dt ≈ half_period)
+        self._pid_kp = 0.6
+        self._pid_ki = 0.08
+        self._pid_kd = 0.04
+        self._pid_integral = 0.0
+        self._pid_last_err: float | None = None
         self._cal_last_dir: int | None = None
-        self._cal_last_mean_z: float | None = None
+        self._cal_last_floor_z: float | None = None
         self._cal_last_mean_r: float | None = None
 
         self.pivot_offset = float(self.get_parameter('pivot_offset_m').value)
@@ -348,47 +357,59 @@ class TiltLaserAssembler(Node):
 
         pts = np.concatenate(self._chunks, axis=0)
 
-        # ---- auto lag calibration ---------------------------------------
-        # The sweep has constant angular velocity omega.  A servo lag L
-        # shifts all commanded angles by ±omega*L (+ on upswing, - on
-        # downswing), producing a mean Z error of ±omega*L*mean(r).
-        # Comparing consecutive opposite-direction sweeps:
-        #   delta_z = z_up - z_down ≈ -2 * omega * L * mean_r
-        #   → L_correction = -delta_z / (2 * omega * mean_r)
-        # We apply a fraction of this each sweep (low-pass) for stability.
+        # ---- auto lag PID -----------------------------------------------
+        # Use only the lowest 20 % of points by Z as the "floor" sample —
+        # these are dominated by ground returns which should be at Z≈0
+        # regardless of sweep direction.  The error signal is the difference
+        # in floor Z between consecutive opposite-direction half-sweeps,
+        # converted to a lag estimate via the sweep angular velocity.
         if self.auto_lag and self._last_dir is not None:
-            # cols: x y z intensity time ring
-            mean_z = float(np.median(pts[:, 2]))
-            # Approximate mean range from x,y,z relative to mount
-            mean_r = float(np.median(np.linalg.norm(
-                pts[:, :3] - self.mount, axis=1)))
+            z_vals = pts[:, 2]
+            thresh = np.percentile(z_vals, 20)
+            floor_mask = z_vals <= thresh
+            if floor_mask.sum() >= 10:
+                floor_z = float(np.median(z_vals[floor_mask]))
+                mean_r = float(np.median(
+                    np.linalg.norm(pts[floor_mask, :3] - self.mount, axis=1)))
 
-            if (self._cal_last_dir is not None
-                    and self._cal_last_dir != self._last_dir
-                    and self._cal_last_mean_z is not None
-                    and mean_r > 0.1):
-                # upswing dir = +1, downswing = -1
-                # On upswing, lag makes Z too low → mean_z_up < true
-                # On downswing, lag makes Z too high → mean_z_down > true
-                # delta = mean_z(up) - mean_z(down) = -2*omega*lag*mean_r
-                if self._cal_last_dir == 1:   # last was up, current is down
-                    delta_z = self._cal_last_mean_z - mean_z
-                else:                          # last was down, current is up
-                    delta_z = mean_z - self._cal_last_mean_z
+                if (self._cal_last_dir is not None
+                        and self._cal_last_dir != self._last_dir
+                        and self._cal_last_floor_z is not None
+                        and mean_r > 0.1):
+                    # delta_z = floor_z(up) - floor_z(down)
+                    # = -2 * omega * lag * mean_r
+                    # → lag_err = -delta_z / (2 * omega * mean_r)
+                    if self._cal_last_dir == 1:   # last=up, current=down
+                        delta_z = self._cal_last_floor_z - floor_z
+                    else:                          # last=down, current=up
+                        delta_z = floor_z - self._cal_last_floor_z
 
-                lag_estimate = delta_z / (2.0 * self._omega * mean_r)
-                # Blend 20 % of the correction per sweep pair
-                correction = 0.2 * lag_estimate
-                self.servo_lag = max(-0.3, min(0.3, self.servo_lag + correction))
-                self.get_logger().info(
-                    f'Auto-lag: δz={delta_z*1000:.1f} mm  '
-                    f'est={lag_estimate*1000:.1f} ms  '
-                    f'→ servo_lag={self.servo_lag*1000:.1f} ms'
-                )
+                    lag_err = delta_z / (2.0 * self._omega * mean_r)
 
-            self._cal_last_dir = self._last_dir
-            self._cal_last_mean_z = mean_z
-            self._cal_last_mean_r = mean_r
+                    # PID
+                    self._pid_integral += lag_err * self.half_period
+                    self._pid_integral = max(-0.2, min(0.2, self._pid_integral))
+                    derivative = 0.0
+                    if self._pid_last_err is not None:
+                        derivative = (lag_err - self._pid_last_err) / self.half_period
+                    self._pid_last_err = lag_err
+
+                    correction = (self._pid_kp * lag_err
+                                  + self._pid_ki * self._pid_integral
+                                  + self._pid_kd * derivative)
+                    self.servo_lag = max(-0.3, min(0.3,
+                                                   self.servo_lag + correction))
+                    self.get_logger().info(
+                        f'Auto-lag PID: δz={delta_z*1000:.1f} mm  '
+                        f'err={lag_err*1000:.1f} ms  '
+                        f'I={self._pid_integral*1000:.1f}  '
+                        f'D={derivative*1000:.1f}  '
+                        f'→ servo_lag={self.servo_lag*1000:.1f} ms'
+                    )
+
+                self._cal_last_dir = self._last_dir
+                self._cal_last_floor_z = floor_z
+                self._cal_last_mean_r = mean_r
 
         header = Header()
         # Stamp = start of the half-sweep (matches the convention used by
