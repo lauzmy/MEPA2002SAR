@@ -101,6 +101,8 @@ class BNO085Node(Node):
         i2c = ExtendedI2C(self._i2c_bus)
         self._bno = BNO08X_I2C(i2c)
         time.sleep(1)  # Give the sensor time to boot up
+        self._bno.soft_reset()
+        time.sleep(1)  # Wait for reset to complete
 
         orientation_report = (
             BNO_REPORT_GAME_ROTATION_VECTOR
