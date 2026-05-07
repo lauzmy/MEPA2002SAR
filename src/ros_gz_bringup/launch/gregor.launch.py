@@ -59,7 +59,10 @@ def generate_launch_description():
         executable='IMU',
         name='imu_node',
         output='screen',
-        parameters=[{'use_sim_time': False}]
+        parameters=[{
+            'use_sim_time': False,
+            'i2c_bus': 4,
+            }]
     )
 
     # 4. Ekte Sensorer 
