@@ -94,25 +94,17 @@ class ThermalProcessor(Node):
         )
         self.heat_info_pub.publish(info_msg)
 
-        # Build a grayscale background for low temperatures and apply
-        # an inferno colormap only on warm regions.
-        # For inferno color mapping normalize over [inferno_threshold .. max_temp]
-        denom = max(1e-6, (self.max_temp - self.inferno_threshold))
-        vis = np.clip((temp - self.inferno_threshold) / denom, 0.0, 1.0)
-        vis8 = (vis * 255.0).astype(np.uint8)
+        # Stretch the full frame to the visible range, then colorize it
+        # completely with inferno so there is no grayscale fallback.
+        temp_min = float(np.min(temp))
+        temp_max = float(np.max(temp))
+        denom = max(1e-6, temp_max - temp_min)
+        vis8 = np.clip((temp - temp_min) / denom * 255.0, 0.0, 255.0).astype(np.uint8)
+
         if self.blur_kernel > 1:
             vis8 = cv2.GaussianBlur(vis8, (self.blur_kernel, self.blur_kernel), 0)
 
-        # Grayscale ramp below `inferno_threshold` (from 0 .. inferno_threshold)
-        gray_min = self.min_temp
-        gray_denom = max(1e-6, (self.inferno_threshold - gray_min))
-        gray_vis = np.clip((temp - gray_min) / gray_denom, 0.0, 1.0)
-        gray8 = (gray_vis * 255.0).astype(np.uint8)
-        vis_color = cv2.cvtColor(gray8, cv2.COLOR_GRAY2BGR)
-
-        # Colorize warm regions using inferno
-        heat_vis = cv2.applyColorMap(vis8, int(self.heat_colormap))
-        vis_color[warm_mask] = heat_vis[warm_mask]
+        vis_color = cv2.applyColorMap(vis8, int(self.heat_colormap))
 
         out_msg = self.bridge.cv2_to_imgmsg(vis_color, encoding='bgr8')
         out_msg.header = msg.header

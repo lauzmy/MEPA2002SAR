@@ -23,7 +23,7 @@ class ThermalReading(Node):
         self.force_y16 = True
         self.frame_width = 160
         self.frame_height = 120
-        self.show_preview = True
+        self.show_preview = False
         self.preview_scale = 4.0
         self.preview_window_name = 'PureThermal3 Raw'
 
