@@ -4,7 +4,7 @@ import tempfile
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -53,6 +53,8 @@ def generate_launch_description():
     rviz_arg = DeclareLaunchArgument('rviz', default_value='true', description='Open RViz.')
     slam_arg = DeclareLaunchArgument('slam', default_value='true', description='Start slam_toolbox')
     nav2_arg = DeclareLaunchArgument('nav2', default_value='true', description='Run Nav2')
+    explore_arg = DeclareLaunchArgument('explore', default_value='true',
+                                        description='Run frontier_explorer for autonomous exploration')
     use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time')
 
     slam_params_default = os.path.join(
@@ -108,8 +110,8 @@ def generate_launch_description():
             'use_sim_time': True # VIKTIG for at TF2 og klokken skal synkroniseres med Gazebo
         }],
         remappings=[
-            # Noden din lytter til '/scan', men Gazebo-bridgen publiserer til '/test_robot/scan'
-            ('/scan', '/test_robot/scan') 
+            # Noden din lytter til '/scan', og Gazebo-bridgen publiserer også til '/scan'
+            ('/scan', '/scan') 
         ]
     )
 
@@ -140,17 +142,36 @@ def generate_launch_description():
     )
 
     # Finn stien til Nav2 konfigurasjonsfilen for simulering
-    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'sim', 'nav2_params_protomota.yaml')
+    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'sim', 'nav2_params_smac2D.yaml')
 
-    nav2 = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')
-        ),
-        launch_arguments={
-            'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'params_file': nav2_params_file
-        }.items(),
-        condition=IfCondition(LaunchConfiguration('nav2'))
+    nav2 = TimerAction(
+        period=5.0,
+        actions=[IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')
+            ),
+            launch_arguments={
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'params_file': nav2_params_file
+            }.items(),
+        )],
+        condition=IfCondition(LaunchConfiguration('nav2')),
+    )
+
+    explore_lite_node = Node(
+        package='explore_lite',
+        executable='explore',
+        name='explore_node',
+        output='screen',
+        parameters=[
+            os.path.join(pkg_project_bringup, 'config', 'sim', 'explore.yaml'),
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ],
+    )
+    explore = TimerAction(
+        period=12.0,   # vent til Nav2 og SLAM er aktive
+        actions=[explore_lite_node],
+        condition=IfCondition(LaunchConfiguration('explore')),
     )
 
 
@@ -163,16 +184,14 @@ def generate_launch_description():
         rviz_arg,
         slam_arg,
         nav2_arg,
+        explore_arg,
         use_sim_time_arg,
         slam_params_arg,
 
         bridge,
         robot_state_publisher,
-        lidar_sweeper,
-        laser_assembler_node,
         ekf_node,
         slam,
         nav2,
-        rviz,
-        YOLO_node
+        explore,
     ])

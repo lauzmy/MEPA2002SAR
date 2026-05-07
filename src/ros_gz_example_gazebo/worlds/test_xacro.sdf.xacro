@@ -146,6 +146,7 @@
 
 
     <!-- Teddy Bear / Leketøy fra Gazebo Fuel -->
+    <!--
     <include>
       <uri>
         https://fuel.gazebosim.org/1.0/OpenRobotics/models/Rescue Randy Sitting
@@ -153,7 +154,8 @@
       <name>teddy_bear</name>
       <pose>2.0 0.0 0.0 0 0 -1.57</pose> 
     </include>
-
+    -->
+    
     <include>
       <uri>model://xacro_test</uri>
       <name>test_robot</name>

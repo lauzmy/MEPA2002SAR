@@ -173,7 +173,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /test_robot/scan
+        Value: /scan
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -233,7 +233,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /test_robot/odometry
+        Value: /odometry
       Value: true
     - Class: rviz_default_plugins/Map
       Enabled: true
@@ -256,7 +256,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /test_robot/points
+        Value: /points
       Style: Points
       Size (Pixels): 3
       Size (m): 0.02

@@ -33,7 +33,7 @@ class MecanumAllocator(Node):
             self.cmd_vel_callback,
             10)
         
-        self.odom_publisher = self.create_publisher(Odometry, '/gregor/odometry', 10)
+        self.odom_publisher = self.create_publisher(Odometry, '/wheel/odometry', 10)
 
         # State for odometri-kalkulering
         self.x = 0.0
