@@ -20,11 +20,11 @@ class ThermalProcessor(Node):
         # Full sensor temperature range shown in visualization
         self.min_temp = 0.0
         # Upper bound for inferno colormap (tuneable: 60 or 70 are common)
-        self.max_temp = 60.0
+        self.max_temp = 70.0
         # Temperature threshold where we switch from grayscale -> inferno
         self.inferno_threshold = 25.0
         self.blur_kernel = 3
-        self.bad_pixel_correction = False
+        self.bad_pixel_correction = True
         self.hotspot_temp = 40.0
 
         self.hotspot_padding = 6
@@ -73,23 +73,31 @@ class ThermalProcessor(Node):
         else:
             proximity = 'close'
 
-        # Find hottest spot
+        # Find hottest, average and minimum temperatures (ignore non-finite pixels)
         valid_mask = np.isfinite(temp)
-        hottest_temp = 0.0
+        hottest_temp = float('nan')
         x_hottest = -1
         y_hottest = -1
         if np.any(valid_mask):
             # Find coordinates and value of hottest pixel
-            max_idx = np.argmax(temp)
+            max_idx = np.nanargmax(temp)
             y_hottest, x_hottest = np.unravel_index(max_idx, temp.shape)
             hottest_temp = float(temp[y_hottest, x_hottest])
+
+        if np.any(valid_mask):
+            avg_temp = float(np.mean(temp[valid_mask]))
+            min_temp_pixel = float(np.min(temp[valid_mask]))
+        else:
+            avg_temp = float('nan')
+            min_temp_pixel = float('nan')
 
         in_heat_range = self.inferno_threshold <= hottest_temp <= self.max_temp
         status = 'heat_detected' if in_heat_range else 'no_heat'
         info_msg = String()
         info_msg.data = (
             f'status={status}, temp_c={hottest_temp:.1f}, '
-            f'coordinates=({x_hottest},{y_hottest}), '
+            f'avg_temp_c={avg_temp:.1f}, min_temp_c={min_temp_pixel:.1f}, '
+            #f'coordinates=({x_hottest},{y_hottest}), '
             f'proximity={proximity}, warm_ratio={warm_ratio:.3f}'
         )
         self.heat_info_pub.publish(info_msg)
