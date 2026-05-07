@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import time
 from typing import Iterable
 
 import rclpy
@@ -99,6 +100,7 @@ class BNO085Node(Node):
 
         i2c = ExtendedI2C(self._i2c_bus)
         self._bno = BNO08X_I2C(i2c)
+        time.sleep(1)  # Give the sensor time to boot up
 
         orientation_report = (
             BNO_REPORT_GAME_ROTATION_VECTOR
