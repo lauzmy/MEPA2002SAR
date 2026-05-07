@@ -27,6 +27,7 @@ services:
     devices:
       - /dev/gpiochip0
       - "/dev/i2c-1:/dev/i2c-1"
+      - "/dev/i2c-4:/dev/i2c-4"
       # - "/dev/video0:/dev/video0" (for kameraet fra forrige feil)
     group_add:
       - dialout
