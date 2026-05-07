@@ -15,6 +15,7 @@ class ThermalReading(Node):
         super().__init__('thermal_Reading')
         self.bridge = CvBridge()
         self.frame_count = 0
+        self._last_fps_log = self.get_clock().now()
 
         #videoframe configuration
         self.video_device = '/dev/video2'
@@ -29,6 +30,7 @@ class ThermalReading(Node):
 
         # Open camera
         self.cap = cv2.VideoCapture(self.video_device, cv2.CAP_V4L2)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
         
         if self.frame_width > 0 and self.frame_height > 0:
@@ -66,10 +68,19 @@ class ThermalReading(Node):
         raw = self.to_mono16(frame)
 
         # Publish raw 16-bit image (no conversion to Celsius here)
-        out_msg = self.bridge.cv2_to_imgmsg(raw.astype(np.uint16), encoding='mono16')
+        out_msg = self.bridge.cv2_to_imgmsg(raw, encoding='mono16')
         out_msg.header.stamp = self.get_clock().now().to_msg()
         out_msg.header.frame_id = 'thermal_camera'
         self.pub.publish(out_msg)
+
+        # Light-weight timing log to help spot lag or dropped frames.
+        if self.frame_count % 30 == 0:
+            now = self.get_clock().now()
+            elapsed_s = (now - self._last_fps_log).nanoseconds * 1e-9
+            if elapsed_s > 0.0:
+                fps = 30.0 / elapsed_s
+                self.get_logger().info(f'Capture rate: {fps:.1f} fps')
+            self._last_fps_log = now
 
         # Optional preview
         if self.show_preview:
