@@ -235,10 +235,11 @@ def generate_launch_description():
         IMU_node,
         allocator_node,
         ldlidar_node,
+        thermal_Reading,
         ekf_node,
         slam,
         nav2,
         explore,
-        ready_message
+        ready_message, 
     ])
 
