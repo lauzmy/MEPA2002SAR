@@ -51,7 +51,7 @@ class ThermalReading(Node):
         self.timer = self.create_timer(1.0 / self.frame_rate, self.cb_capture)
 
         self.get_logger().info(
-            f'ThermalConverter started: device={self.video_device}, '
+            f'ThermalReading started: device={self.video_device}, '
             f'format={fourcc_str.strip() or fourcc}, '
             f'size={actual_w}x{actual_h}, preview={self.show_preview}'
         )
@@ -141,7 +141,7 @@ class ThermalReading(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ThermalConverter()
+    node = ThermalReading()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
