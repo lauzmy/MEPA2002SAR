@@ -115,13 +115,12 @@ def generate_launch_description():
         package='ros_gz_application',
         executable='thermal_reading',
         name='thermal_Reading',
-        output='screen',
+        output='screen', 
         parameters=[
-            {'frame_rate': 9.0},
-            {'show_preview': True},
-            {'preview_scale': 4.0},
             {'use_sim_time': False}
-        ]
+        ]   
+
+
     )
 
     thermal_processor = Node(
@@ -130,12 +129,7 @@ def generate_launch_description():
         name = 'thermal_processor',
         output = 'screen',
         parameters=[
-                {'min_temp_celsius': 20.0},
-                {'max_temp_celsius': 100.0},
-                {'temp_bins': [20.0, 35.0, 40.0, 50.0, 60.0]},
-            {'num_top_spots': 3},
-            {'min_area_pixels': 50},
-            {'gaussian_blur_kernel': 3}
+            {'use_sim_time': False}
         ]
     )
         

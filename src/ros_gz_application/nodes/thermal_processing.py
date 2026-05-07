@@ -9,119 +9,90 @@ import numpy as np
 import cv2
 
 
-class ThermalProcessor(Node):
-    """Subscribe to raw thermal, convert to Celsius, and visualize warm regions."""
-    
+class ThermalProcessing(Node):
+
     def __init__(self):
-        super().__init__('thermal_processor')
+        super().__init__('thermal_processing')
+
         self.bridge = CvBridge()
+        self.temp_scale = 100.0
+        self.temp_offset = -273.15
 
-        #temperature configuration
-        # Full sensor temperature range shown in visualization
-        self.min_temp = 0.0
-        # Upper bound for inferno colormap (tuneable: 60 or 70 are common)
-        self.max_temp = 70.0
-        # Temperature threshold where we switch from grayscale -> inferno
-        self.inferno_threshold = 25.0
-        self.blur_kernel = 3
-        self.bad_pixel_correction = True
-        self.hotspot_temp = 40.0
+        self.sub = self.create_subscription(
+            Image,
+            '/thermal/pixel_raw',
+            self.process_frame,
+            10
+        )
 
-        self.hotspot_padding = 6
-        self.hotspot_min_area = 20
+        self.heat_info_pub = self.create_publisher(
+            String,
+            '/thermal/heat_info',
+            10
+        )
 
-        # Calibration offset (deg C) to correct systematic bias in readings
-        # Set e.g. -10.0 if temps are consistently 10°C too high
-        self.temp_offset = 0.0
+        self.image_pub = self.create_publisher(
+            Image,
+            '/thermal/processed_image',
+            10
+        )
 
-        # How many degrees below `min_temp` will be shown as a grayscale ramp
-        # How many degrees below `inferno_threshold` will be shown as a grayscale ramp
-        # For grayscale 0..25 set gray_span == inferno_threshold
-        self.gray_span = float(self.inferno_threshold)
+        self.get_logger().info(
+            'ThermalProcessing started: publishing /thermal/heat_info and /thermal/processed_image'
+        )
 
-        # Use OpenCV inferno colormap for thermal visualization
-        self.heat_colormap = cv2.COLORMAP_INFERNO
-
-        # Subscribe to raw thermal topic from converter
-        self.sub = self.create_subscription(Image, '/camera/raw_thermal', self.cb_image, 10)
-
-        # Publishers
-        self.heat_info_pub = self.create_publisher(String, '/thermal/heat_info', 10)
-        self.processed_pub = self.create_publisher(Image, '/thermal/processed_image', 10)
-
-        self.get_logger().info('ThermalProcessor started')
-
-    def cb_image(self, msg: Image):
-        # Receive raw 16-bit mono thermal
+    def process_frame(self, msg):
         raw = self.bridge.imgmsg_to_cv2(msg, desired_encoding='mono16')
 
-        # Convert raw 16-bit to Celsius and apply optional calibration offset
-        temp = raw.astype(np.float32) / 100.0 - 273.15 + float(self.temp_offset)
+        # raw pixels -> Celsius
+        temp = raw.astype(np.float32) / self.temp_scale + self.temp_offset
 
-        # Pixel correction
-        if self.bad_pixel_correction:
-            temp = cv2.medianBlur(temp, 3)
+        # temperature stats
+        min_temp = float(np.min(temp))
+        max_temp = float(np.max(temp))
+        avg_temp = float(np.mean(temp))
 
-        # Warm area ratio in the inferno range (inferno_threshold .. max_temp).
-        warm_mask = (temp >= self.inferno_threshold) & (temp <= self.max_temp)
-        warm_ratio = float(np.count_nonzero(warm_mask)) / float(warm_mask.size)
+        # hottest pixel coordinate
+        y, x = np.unravel_index(np.argmax(temp), temp.shape)
 
-        if warm_ratio < 0.05:
-            proximity = 'far'
-        elif warm_ratio < 0.20:
-            proximity = 'medium'
-        else:
-            proximity = 'close'
-
-        # Find hottest, average and minimum temperatures (ignore non-finite pixels)
-        valid_mask = np.isfinite(temp)
-        hottest_temp = float('nan')
-        x_hottest = -1
-        y_hottest = -1
-        if np.any(valid_mask):
-            # Find coordinates and value of hottest pixel
-            max_idx = np.nanargmax(temp)
-            y_hottest, x_hottest = np.unravel_index(max_idx, temp.shape)
-            hottest_temp = float(temp[y_hottest, x_hottest])
-
-        if np.any(valid_mask):
-            avg_temp = float(np.mean(temp[valid_mask]))
-            min_temp_pixel = float(np.min(temp[valid_mask]))
-        else:
-            avg_temp = float('nan')
-            min_temp_pixel = float('nan')
-
-        in_heat_range = self.inferno_threshold <= hottest_temp <= self.max_temp
-        status = 'heat_detected' if in_heat_range else 'no_heat'
-        info_msg = String()
-        info_msg.data = (
-            f'status={status}, temp_c={hottest_temp:.1f}, '
-            f'avg_temp_c={avg_temp:.1f}, min_temp_c={min_temp_pixel:.1f}, '
-            #f'coordinates=({x_hottest},{y_hottest}), '
-            f'proximity={proximity}, warm_ratio={warm_ratio:.3f}'
+        # publish heat info
+        info = String()
+        info.data = (
+            f'max={max_temp:.2f}, '
+            f'min={min_temp:.2f}, '
+            f'avg={avg_temp:.2f}, '
+            f'x={x}, '
+            f'y={y}'
         )
-        self.heat_info_pub.publish(info_msg)
+        self.heat_info_pub.publish(info)
 
-        # Stretch the full frame to the visible range, then colorize it
-        # completely with inferno so there is no grayscale fallback.
-        temp_min = float(np.min(temp))
-        temp_max = float(np.max(temp))
-        denom = max(1e-6, temp_max - temp_min)
-        vis8 = np.clip((temp - temp_min) / denom * 255.0, 0.0, 255.0).astype(np.uint8)
+        # make inferno colormap image
+        image_8bit = cv2.normalize(
+            temp,
+            None,
+            0,
+            255,
+            cv2.NORM_MINMAX
+        ).astype(np.uint8)
 
-        if self.blur_kernel > 1:
-            vis8 = cv2.GaussianBlur(vis8, (self.blur_kernel, self.blur_kernel), 0)
+        colormap = cv2.applyColorMap(
+            image_8bit,
+            cv2.COLORMAP_INFERNO
+        )
 
-        vis_color = cv2.applyColorMap(vis8, int(self.heat_colormap))
+        # publish processed image for RViz
+        image_msg = self.bridge.cv2_to_imgmsg(
+            colormap,
+            encoding='bgr8'
+        )
+        image_msg.header = msg.header
 
-        out_msg = self.bridge.cv2_to_imgmsg(vis_color, encoding='bgr8')
-        out_msg.header = msg.header
-        self.processed_pub.publish(out_msg)
+        self.image_pub.publish(image_msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ThermalProcessor()
+    node = ThermalProcessing()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

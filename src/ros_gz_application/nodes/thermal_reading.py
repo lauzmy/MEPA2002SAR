@@ -9,155 +9,100 @@ import numpy as np
 
 
 class ThermalReading(Node):
-    """Read raw thermal camera and publish as ROS Image topic"""
-
     def __init__(self):
-        super().__init__('thermal_Reading')
+        super().__init__('thermal_reading')
+
         self.bridge = CvBridge()
-        self.frame_count = 0
-        self._last_fps_log = self.get_clock().now()
 
-        #videoframe configuration
-        self.video_device = '/dev/video2'
-        self.frame_rate = 9.0
-        self.output_topic = '/camera/raw_thermal'
-        self.force_y16 = True
-        self.frame_width = 160
-        self.frame_height = 120
-        self.show_preview = False
-        self.preview_scale = 4.0
-        self.preview_window_name = 'PureThermal3 Raw'
+        self.device = '/dev/video2'
+        self.width = 160
+        self.height = 120
+        self.fps = 9.0
 
-        # Open camera
-        self.cap = cv2.VideoCapture(self.video_device, cv2.CAP_V4L2)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.raw_topic = '/thermal/pixel_raw'
+        self.grey_topic = '/thermal/Image_raw'
+
+        self.cap = cv2.VideoCapture(self.device, cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
-        
-        if self.frame_width > 0 and self.frame_height > 0:
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
-        
-        if self.force_y16:
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('Y', '1', '6', ' '))
-        
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('Y', '1', '6', ' '))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+
         if not self.cap.isOpened():
-            raise RuntimeError(f'Could not open video device: {self.video_device}')
+            raise RuntimeError(f'Could not open camera: {self.device}')
 
-        actual_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        actual_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC))
-        fourcc_str = ''.join(chr((fourcc >> (8 * i)) & 0xFF) for i in range(4))
+        self.raw_pub = self.create_publisher(Image, self.raw_topic, 10)
+        self.grey_pub = self.create_publisher(Image, self.grey_topic, 10)
 
-        # Publishers: publish raw thermal data
-        self.pub = self.create_publisher(Image, self.output_topic, 10)
-        self.timer = self.create_timer(1.0 / self.frame_rate, self.cb_capture)
+        self.timer = self.create_timer(1.0 / self.fps, self.read_frame)
 
         self.get_logger().info(
-            f'ThermalReading started: device={self.video_device}, '
-            f'format={fourcc_str.strip() or fourcc}, '
-            f'size={actual_w}x{actual_h}, preview={self.show_preview}'
+            f'ThermalReading started: publishing {self.raw_topic} and {self.grey_topic}'
         )
 
-    def cb_capture(self):
+    def read_frame(self):
         ok, frame = self.cap.read()
-        
-        if not ok:
-            raise RuntimeError(f'Failed to capture frame from {self.video_device}')
 
-        self.frame_count += 1
+        if not ok:
+            self.get_logger().warn('Failed to read frame')
+            return
+
         raw = self.to_mono16(frame)
 
-        # Publish raw 16-bit image (no conversion to Celsius here)
-        out_msg = self.bridge.cv2_to_imgmsg(raw, encoding='mono16')
-        out_msg.header.stamp = self.get_clock().now().to_msg()
-        out_msg.header.frame_id = 'thermal_camera'
-        self.pub.publish(out_msg)
+        stamp = self.get_clock().now().to_msg()
 
-        # Light-weight timing log to help spot lag or dropped frames.
-        if self.frame_count % 30 == 0:
-            now = self.get_clock().now()
-            elapsed_s = (now - self._last_fps_log).nanoseconds * 1e-9
-            if elapsed_s > 0.0:
-                fps = 30.0 / elapsed_s
-                self.get_logger().info(f'Capture rate: {fps:.1f} fps')
-            self._last_fps_log = now
+        raw_msg = self.bridge.cv2_to_imgmsg(raw, encoding='mono16')
+        raw_msg.header.stamp = stamp
+        raw_msg.header.frame_id = 'thermal_camera'
+        self.raw_pub.publish(raw_msg)
 
-        # Optional preview
-        if self.show_preview:
-            self._show_preview(raw)
+        grey = cv2.normalize(
+            raw,
+            None,
+            0,
+            255,
+            cv2.NORM_MINMAX
+        ).astype(np.uint8)
 
-        # Log first frame
-        if self.frame_count == 1:
-            self.get_logger().info(
-                f'First frame: {raw.shape[1]}x{raw.shape[0]}, {raw.dtype}'
-            )
-
-    def _show_preview(self, raw):
-        """Display raw thermal as grayscale preview (for debug only)"""
-        display_8u = cv2.normalize(raw, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        preview = display_8u
-
-        if self.preview_scale != 1.0:
-            width = int(preview.shape[1] * self.preview_scale)
-            height = int(preview.shape[0] * self.preview_scale)
-            preview = cv2.resize(preview, (width, height), interpolation=cv2.INTER_NEAREST)
-        
-        cv2.imshow(self.preview_window_name, preview)
-        key = cv2.waitKey(1) & 0xFF
-        
-        if key == 255:
-            pass  # No key
-        elif key == ord('q') or key == 27:  # q or Esc
-            self.get_logger().info('User pressed quit, shutting down')
-            rclpy.shutdown()
-        else:
-            self.get_logger().debug(f'Key: {key}')
+        grey_msg = self.bridge.cv2_to_imgmsg(grey, encoding='mono8')
+        grey_msg.header.stamp = stamp
+        grey_msg.header.frame_id = 'thermal_camera'
+        self.grey_pub.publish(grey_msg)
 
     def to_mono16(self, frame):
-        """Normalize frame to uint16 mono"""
         if frame is None:
             raise ValueError('Empty frame')
 
-        # Fast path: already uint16 mono (expected for PureThermal3 Y16)
         if frame.ndim == 2 and frame.dtype == np.uint16:
             return frame
-        
-        # Handle edge cases
-        if frame.ndim == 3:
-            if frame.shape[2] == 2 and frame.dtype == np.uint8:
-                # 2-channel uint8: little-endian uint16
-                return frame[:, :, 0].astype(np.uint16) | (frame[:, :, 1].astype(np.uint16) << 8)
-            else:
-                # Convert multi-channel to grayscale
-                color_code = cv2.COLOR_BGR2GRAY if frame.shape[2] == 3 else cv2.COLOR_BGRA2GRAY
-                frame = cv2.cvtColor(frame, color_code)
-        
-        # Convert to uint16 if not already
-        if frame.dtype == np.uint16:
-            return frame
-        elif frame.dtype == np.uint8:
-            return frame.astype(np.uint16) * 257
-        else:
-            raise ValueError(f'Unsupported dtype: {frame.dtype}')
+
+        if frame.ndim == 3 and frame.shape[2] == 2 and frame.dtype == np.uint8:
+            return frame[:, :, 0].astype(np.uint16) | (
+                frame[:, :, 1].astype(np.uint16) << 8
+            )
+
+        raise ValueError(
+            f'Unsupported frame format: shape={frame.shape}, dtype={frame.dtype}'
+        )
 
     def destroy_node(self):
-        if self.show_preview:
-            cv2.destroyWindow(self.preview_window_name)
-        
-        if hasattr(self, 'cap') and self.cap is not None:
+        if self.cap is not None:
             self.cap.release()
-        
-        return super().destroy_node()
+
+        super().destroy_node()
 
 
 def main(args=None):
     rclpy.init(args=args)
+
     node = ThermalReading()
+
     rclpy.spin(node)
+
     node.destroy_node()
     rclpy.shutdown()
 
 
 if __name__ == '__main__':
     main()
-
