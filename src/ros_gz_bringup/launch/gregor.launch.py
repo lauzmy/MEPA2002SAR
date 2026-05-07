@@ -24,6 +24,7 @@ def generate_launch_description():
     rviz_arg = DeclareLaunchArgument('rviz', default_value='true', description='Open RViz')
     slam_arg = DeclareLaunchArgument('slam', default_value='true', description='Run SLAM')
     nav2_arg = DeclareLaunchArgument('nav2', default_value='true', description='Run Nav2')
+    explore_arg = DeclareLaunchArgument('explore', default_value='true', description='Run autonomous exploration')
     
     # 3. TF Tree publisering
     robot_state_publisher = Node(
@@ -168,6 +169,22 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('nav2'))
     )
 
+    explore_lite_node = Node(
+        package='explore_lite',
+        executable='explore',
+        name='explore_node',
+        output='screen',
+        parameters=[
+            os.path.join(pkg_project_bringup, 'config', 'sim', 'explore.yaml'),
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ],
+    )
+    explore = TimerAction(
+        period=12.0,   # vent til Nav2 og SLAM er aktive
+        actions=[explore_lite_node],
+        condition=IfCondition(LaunchConfiguration('explore')),
+    )
+
     # 6. Din egendefinerte kode
     lidar_sweeper = Node(
         package='ros_gz_application',
@@ -198,6 +215,7 @@ def generate_launch_description():
         rviz_arg,
         slam_arg,
         nav2_arg,
+        explore_arg,
         robot_state_publisher,
         joint_state_publisher_node,
         IMU_node,
@@ -208,6 +226,7 @@ def generate_launch_description():
         ekf_node,
         slam,
         nav2,
+        explore,
         ready_message
     ])
 
