@@ -232,8 +232,6 @@ def generate_launch_description():
         IMU_node,
         allocator_node,
         ldlidar_node,
-        thermal_converter,
-        thermal_processor,
         ekf_node,
         slam,
         nav2,
