@@ -82,16 +82,16 @@ class ThermalReading(Node):
             )
 
     def _show_preview(self, raw):
-        """Display raw thermal with false colors (for debug only)"""
+        """Display raw thermal as grayscale preview (for debug only)"""
         display_8u = cv2.normalize(raw, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        colored = cv2.applyColorMap(display_8u, cv2.COLORMAP_INFERNO)
+        preview = display_8u
 
         if self.preview_scale != 1.0:
-            width = int(colored.shape[1] * self.preview_scale)
-            height = int(colored.shape[0] * self.preview_scale)
-            colored = cv2.resize(colored, (width, height), interpolation=cv2.INTER_NEAREST)
+            width = int(preview.shape[1] * self.preview_scale)
+            height = int(preview.shape[0] * self.preview_scale)
+            preview = cv2.resize(preview, (width, height), interpolation=cv2.INTER_NEAREST)
         
-        cv2.imshow(self.preview_window_name, colored)
+        cv2.imshow(self.preview_window_name, preview)
         key = cv2.waitKey(1) & 0xFF
         
         if key == 255:
