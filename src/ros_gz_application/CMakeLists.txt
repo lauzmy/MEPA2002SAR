@@ -63,4 +63,16 @@ install(PROGRAMS
 	RENAME thermal_processing
 )
 
+install(PROGRAMS
+	nodes/ir_sensor_driver.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME ir_sensor_driver
+)
+
+install(PROGRAMS
+	nodes/collision_avoidance.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME collision_avoidance
+)
+
 ament_package()

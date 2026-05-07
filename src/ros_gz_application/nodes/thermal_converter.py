@@ -16,27 +16,16 @@ class ThermalConverter(Node):
         self.bridge = CvBridge()
         self.frame_count = 0
 
-        # Parameters
-        self.declare_parameter('video_device', '/dev/video2')
-        self.declare_parameter('frame_rate', 9.0)
-        self.declare_parameter('output_topic', '/camera/raw_thermal')
-        self.declare_parameter('force_y16', True)
-        self.declare_parameter('frame_width', 160)
-        self.declare_parameter('frame_height', 120)
-        self.declare_parameter('show_preview', True)
-        self.declare_parameter('preview_scale', 4.0)
-        self.declare_parameter('preview_window_name', 'PureThermal3 Raw')
-
-        # Load parameters
-        self.video_device = str(self.get_parameter('video_device').value)
-        self.frame_rate = max(1.0, float(self.get_parameter('frame_rate').value))
-        self.output_topic = str(self.get_parameter('output_topic').value)
-        self.force_y16 = bool(self.get_parameter('force_y16').value)
-        self.frame_width = int(self.get_parameter('frame_width').value)
-        self.frame_height = int(self.get_parameter('frame_height').value)
-        self.show_preview = bool(self.get_parameter('show_preview').value)
-        self.preview_scale = max(1.0, float(self.get_parameter('preview_scale').value))
-        self.preview_window_name = str(self.get_parameter('preview_window_name').value)
+        #videoframe configuration
+        self.video_device = '/dev/video2'
+        self.frame_rate = 9.0
+        self.output_topic = '/camera/raw_thermal'
+        self.force_y16 = True
+        self.frame_width = 160
+        self.frame_height = 120
+        self.show_preview = True
+        self.preview_scale = 4.0
+        self.preview_window_name = 'PureThermal3 Raw'
 
         # Open camera
         self.cap = cv2.VideoCapture(self.video_device, cv2.CAP_V4L2)
