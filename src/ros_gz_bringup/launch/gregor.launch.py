@@ -61,7 +61,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': False,
-            'i2c_bus': 1,
+            'i2c_bus': 4,
             }]
     )
 
