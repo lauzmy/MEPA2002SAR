@@ -52,21 +52,15 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-	nodes/thermal_converter.py
+	nodes/thermal_reading.py
 	DESTINATION lib/${PROJECT_NAME}
-	RENAME thermal_converter
+	RENAME thermal_reading
 )
 
 install(PROGRAMS
 	nodes/thermal_processing.py
 	DESTINATION lib/${PROJECT_NAME}
 	RENAME thermal_processing
-)
-
-install(PROGRAMS
-	nodes/ir_sensor_driver.py
-	DESTINATION lib/${PROJECT_NAME}
-	RENAME ir_sensor_driver
 )
 
 install(PROGRAMS

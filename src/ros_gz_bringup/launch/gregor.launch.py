@@ -96,11 +96,22 @@ def generate_launch_description():
         ]
     )
 
-    #Termokamera node for å lese rå termiske bilder fra /dev/video2
-    thermal_converter = Node(
+    # IR sensorer for collision avoidance
+    ir_sensor = Node(
         package='ros_gz_application',
-        executable='thermal_converter',
-        name='thermal_converter',
+        executable='collision_avoidance',
+        name='collision_avoidance',
+        output='screen',
+        parameters=[
+            {'use_sim_time': False}
+        ]
+    )
+
+    #Termokamera node for å lese rå termiske bilder fra /dev/video2
+    thermal_Reading = Node(
+        package='ros_gz_application',
+        executable='thermal_reading',
+        name='thermal_Reading',
         output='screen',
         parameters=[
             {'frame_rate': 9.0},

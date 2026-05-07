@@ -8,11 +8,11 @@ import cv2
 import numpy as np
 
 
-class ThermalConverter(Node):
+class ThermalReading(Node):
     """Read raw thermal camera and publish as ROS Image topic"""
 
     def __init__(self):
-        super().__init__('thermal_converter')
+        super().__init__('thermal_Reading')
         self.bridge = CvBridge()
         self.frame_count = 0
 
