@@ -117,10 +117,10 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 6.0
+        cost_scaling_factor: 3.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.35
+        inflation_radius: 0.20
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -179,10 +179,10 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 6.0
+        cost_scaling_factor: 3.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.35
+        inflation_radius: 0.20
       always_send_full_costmap: True
 
 map_server:
@@ -297,7 +297,7 @@ collision_monitor:
     polygons: ["slowdown_polygon"]
     slowdown_polygon:
       type: "polygon"
-      points: "[[0.20, 0.20], [0.20, -0.20], [-0.20, -0.20], [-0.20, 0.20]]"
+      points: "[[0.13, 0.11], [0.13, -0.11], [-0.13, -0.11], [-0.13, 0.11]]"  # 26cm x 22cm rectangle around robot
       action_type: "slowdown"
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
