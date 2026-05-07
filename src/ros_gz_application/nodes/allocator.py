@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float32
 import serial
 import math
 import time
@@ -34,6 +35,7 @@ class MecanumAllocator(Node):
             10)
         
         self.odom_publisher = self.create_publisher(Odometry, '/wheel/odometry', 10)
+        self.vbatt_publisher = self.create_publisher(Float32, '/battery_voltage', 10)
 
         # State for odometri-kalkulering
         self.x = 0.0
@@ -154,6 +156,10 @@ class MecanumAllocator(Node):
                 vbatt_byte  = payload[5]
                 crc_byte    = payload[6]
 
+                vbatt_msg = Float32()
+                vbatt_msg.data = float(vbatt_byte)  
+                
+
                 # (Valgfritt) verifiser CRC: self.calculate_crc8(bytearray([0x55]) + payload[:-1]) == crc_byte
 
                 # Use the last commanded direction since ESP32 doesn't report direction in response
@@ -168,6 +174,7 @@ class MecanumAllocator(Node):
                 rpm_M4 = rpm4_byte * dir_M4
 
                 self.calculate_and_publish_odom(rpm_M1, rpm_M2, rpm_M3, rpm_M4)
+                self.vbatt_publisher.publish(vbatt_msg)
             else:
                 # Throwing bytes until we find the next 0x55
                 pass
