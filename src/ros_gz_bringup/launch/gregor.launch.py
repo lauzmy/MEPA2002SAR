@@ -139,6 +139,17 @@ def generate_launch_description():
         ]
     )
         
+    collision_avoidance = Node(
+        package='ros_gz_application',
+        executable='collision_avoidance',
+        name='collision_avoidance',
+        output='screen',
+        parameters=[
+            {'use_sim_time': False}
+        ]
+    )
+    
+    
 
     # 5. Lokalisering & Autonomi
     ekf_node = Node(
