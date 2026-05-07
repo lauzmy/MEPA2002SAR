@@ -20,6 +20,7 @@ down:
 
 shell:
 	sudo chmod a+rw /dev/i2c-1
+	sudo chmod a+rw /dev/i2c-4
 	docker compose exec -u ubuntu -e DISPLAY=$${DISPLAY:-:0} ros2 bash
 
 logs:
