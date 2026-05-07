@@ -31,6 +31,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-gz-plugin-vendor \
     ros-jazzy-gz-sim-vendor \
     ros-jazzy-usb-cam \
+    ros-jazzy-nav2-msgs \
+    ros-jazzy-navigation2 \
+    ros-jazzy-nav2-bringup \
  && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x adafruit-extended-bus rpi-lgpio rpi_hardware_pwm
