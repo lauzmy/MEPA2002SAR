@@ -71,8 +71,7 @@ class ThermalProcessor(Node):
         raw = self.bridge.imgmsg_to_cv2(msg, desired_encoding='mono16')
 
         # Convert raw 16-bit to Celsius
-        raw_f = raw.astype(np.float32) / 65535.0
-        temp = self.min_temp + raw_f * (self.max_temp - self.min_temp)
+        temp = raw.astype(np.float32) / 100.0 - 273.15
 
         # Pixel correction
         if self.bad_pixel_correction:
