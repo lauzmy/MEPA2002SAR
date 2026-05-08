@@ -58,7 +58,8 @@ class ThermalProcessing(Node):
         # scale to 15 - 45 degrees for visualization
         scaled = (temp - self.display_min_c) / (self.display_max_c - self.display_min_c)
         scaled = np.clip(scaled, 0.0, 1.0)
-        im
+        image_8bit = (scaled * 255).astype(np.uint8)
+        
         # make inferno colormap image
         colormap = cv2.applyColorMap(
             image_8bit,
