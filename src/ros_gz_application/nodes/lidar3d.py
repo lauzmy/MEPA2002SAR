@@ -205,7 +205,7 @@ class Lidar3D(Node):
         # UART angle feedback
         self.declare_parameter('uart_port', '/dev/ttyAMA1')
         self.declare_parameter('uart_baud', 921600)
-        self.declare_parameter('angle_offset_deg', -163.0)  # pot midpoint
+        self.declare_parameter('angle_offset_deg', -163.52)  # pot midpoint
         self.declare_parameter('angle_invert', False)
 
         # Topics / frames
