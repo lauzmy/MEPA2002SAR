@@ -17,8 +17,8 @@ class ThermalProcessing(Node):
         self.bridge = CvBridge()
         self.temp_scale = 100.0
         self.temp_offset = -273.15
-        #self.display_min_c = 10.0
-        #self.display_max_c = 60.0
+        self.display_min_c = 15.0
+        self.display_max_c = 45.0
 
         self.sub = self.create_subscription(Image, '/thermal/pixel_raw', self.process_frame, 10)
 
@@ -55,10 +55,11 @@ class ThermalProcessing(Node):
         )
         self.heat_info_pub.publish(info)
 
+        # scale to 15 - 45 degrees for visualization
+        scaled = (temp - self.display_min_c) / (self.display_max_c - self.display_min_c)
+        scaled = np.clip(scaled, 0.0, 1.0)
+        im
         # make inferno colormap image
-        image_8bit = cv2.normalize(temp, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        
-        # apply colormap for visualization
         colormap = cv2.applyColorMap(
             image_8bit,
             cv2.COLORMAP_INFERNO
