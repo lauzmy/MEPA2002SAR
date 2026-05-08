@@ -103,7 +103,7 @@ def generate_launch_description():
         name='lidar3d',
         output='screen',
         parameters=[{
-            'sim': sim,
+            'sim': False,
             'min_angle_deg': -30.0,
             'max_angle_deg': 30.0,
             'sweep_period_s': LaunchConfiguration('sweep_period_s'),
@@ -115,7 +115,7 @@ def generate_launch_description():
             'output_frame': 'body_link',
             'uart_port': '/dev/ttyAMA1',
             'uart_baud': 921600,
-            'pwm_chip': 1,
+            'pwm_chip': 0,
         }],
     )
 
