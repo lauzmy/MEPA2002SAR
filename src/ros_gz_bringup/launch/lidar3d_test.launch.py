@@ -115,6 +115,7 @@ def generate_launch_description():
             'output_frame': 'body_link',
             'uart_port': '/dev/ttyAMA1',
             'uart_baud': 921600,
+            'angle_invert': True,
             'pwm_chip': 0,
         }],
     )
