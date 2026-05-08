@@ -78,17 +78,17 @@
   <!-- ============================================================
        TF OWNERSHIP
        ============================================================
-       map           <- mola_lidar_odometry  (REP-105)
-       odom          <- ekf_filter_node      (world_frame=odom,
-                                              base_link_frame=base_link)
-       base_link     <- URDF root (this link)
+       map            <- mola_lidar_odometry  (REP-105)
+       odom           <- ekf_filter_node      (world_frame=odom,
+                                               base_link_frame=base_link)
+       base_link      <- URDF root (this link)
        base_footprint <- mola's static broadcaster, child of base_link
-                         (do NOT declare it here -- declaring it would
+                         (do NOT declare it here; declaring it would
                          duplicate that static TF and trigger
                          TF_REPEATED_DATA spam)
        body_link, wheels, imu_link, camera_link, laser
-                     <- this URDF (all rigidly attached to base_link
-                        via body_link)
+                      <- this URDF (all rigidly attached to base_link
+                         via body_link)
        ============================================================ -->
   <link name="base_link"/>
 
@@ -291,7 +291,7 @@
        resulting 3D cloud in the LEVEL `body_link` frame.
 
        Therefore the URDF must NOT also tilt `laser` independently
-       in TF -- doing that creates two uncorrelated copies of the
+       in TF; doing that creates two uncorrelated copies of the
        tilt motion: the cloud stays flat in body_link while the
        URDF visual nods around it, and any small MOLA pitch wobble
        then shows up as the entire world tilting under a level
@@ -301,10 +301,10 @@
        servo angle on its own, do it in a debug-only TF (e.g. a
        separate `lidar_tilt_visual_link` driven by joint_states)
        that nothing in the SLAM pipeline subscribes to.
-       ------------------------------------------------------------
+       ============================================================
        Offset: hinge sits ${s1+s5} above body_link origin, sensor
        optical centre is +32 mm above the hinge.
-       ------------------------------------------------------------ -->
+       ============================================================ -->
   <joint name="lidar_joint" type="fixed">
     <parent link="body_link"/>
     <child link="laser"/>
