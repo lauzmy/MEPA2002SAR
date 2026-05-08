@@ -18,6 +18,8 @@ class ThermalReading(Node):
         self.width = 160
         self.height = 120
         self.fps = 9.0
+        self.raw_display_min = 28315 #10 grader Celsius
+        self.raw_display_max = 33315 #60 grader Celsius
 
         self.raw_topic = '/thermal/pixel_raw'
         self.grey_topic = '/thermal/Image_raw'
@@ -57,13 +59,12 @@ class ThermalReading(Node):
         raw_msg.header.frame_id = 'thermal_camera'
         self.raw_pub.publish(raw_msg)
 
-        grey = cv2.normalize(
-            raw,
-            None,
-            0,
-            255,
-            cv2.NORM_MINMAX
-        ).astype(np.uint8)
+        scaled = (raw.astype(np.float32) - self.raw_display_min) / (
+        self.raw_display_max - self.raw_display_min)
+
+        scaled = np.clip(scaled, 0.0, 1.0)
+
+        grey = (scaled * 255).astype(np.uint8)
 
         grey_msg = self.bridge.cv2_to_imgmsg(grey, encoding='mono8')
         grey_msg.header.stamp = stamp
@@ -106,3 +107,5 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
+    
