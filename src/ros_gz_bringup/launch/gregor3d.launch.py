@@ -72,7 +72,7 @@ def generate_launch_description():
         description='Servo tilt sweep period for lidar3d (cloud rate is '
         'still 10 Hz; this only sets how fast the tilt scans up/down).')
     mola_warmup_arg = DeclareLaunchArgument(
-        'mola_warmup_s', default_value='6.0',
+        'mola_warmup_s', default_value='12.0',
         description='Seconds to wait (robot stationary) before starting '
         'MOLA so the first frame defines a clean map origin.')
     mola_output_dir_arg = DeclareLaunchArgument(
@@ -239,6 +239,11 @@ def generate_launch_description():
             # MOLA only adds map->odom (REP-105 compliant).
             'forward_ros_tf_odom_to_mola': 'True',
             'publish_localization_following_rep105': 'True',
+            # Per-revolution clouds from a tilted LD06 can be a bit sparse
+            # (the servo skews how many points land in one rev). Default 100
+            # was making MOLA log "Observation discarded as non-valid" a few
+            # times per minute. 30 still rejects truly empty/garbage scans.
+            'lidar_scan_validity_minimum_point_count': '30',
             # MolaViz (nanogui/OpenGL) segfaults on the Pi 5's aarch64 GL
             # stack ("VertexArrayObject ... m_state.get().created"), and
             # because the upstream launch wraps mola-cli with
