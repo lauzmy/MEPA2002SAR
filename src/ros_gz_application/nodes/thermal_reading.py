@@ -14,7 +14,7 @@ class ThermalReading(Node):
 
         self.bridge = CvBridge()
 
-        self.device = '/dev/video2'
+        self.device = '/dev/video1'
         self.width = 160
         self.height = 120
         self.fps = 9.0
