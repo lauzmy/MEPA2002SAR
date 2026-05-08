@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-nav2-bringup \
     ros-jazzy-mola \
     ros-jazzy-mola-state-estimation \
-    ros-jazzy-mola-lidar-odometry \
+     ros-jazzy-mola-lidar-odometry \
     ros-jazzy-octomap-server \
  && rm -rf /var/lib/apt/lists/*
 
