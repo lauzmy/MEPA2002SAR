@@ -201,6 +201,8 @@ class Lidar3D(Node):
         self.declare_parameter('max_angle_deg', 30.0)
         self.declare_parameter('sweep_period_s', 4.0)
         self.declare_parameter('pwm_update_hz', 50.0)
+        self.declare_parameter('pwm_chip', 0)     # 0 on Pi 4, 2 on Pi 5
+        self.declare_parameter('pwm_channel', 0)  # GPIO12=ch0, GPIO13=ch1
 
         # UART angle feedback
         self.declare_parameter('uart_port', '/dev/ttyAMA1')
@@ -244,14 +246,17 @@ class Lidar3D(Node):
         self._angles = AngleHistory()
 
         # ── Hardware PWM ──────────────────────────────────────────────────
+        pwm_chip = int(self.get_parameter('pwm_chip').value)
+        pwm_channel = int(self.get_parameter('pwm_channel').value)
         self._pwm = None
         if not sim:
             try:
                 from rpi_hardware_pwm import HardwarePWM
-                self._pwm = HardwarePWM(pwm_channel=0, hz=50, chip=0)
+                self._pwm = HardwarePWM(pwm_channel=pwm_channel, hz=50, chip=pwm_chip)
                 self._pwm.start(0)
                 self._pwm.change_duty_cycle(self.PWM_CENTER_PCT)
-                self.get_logger().info('Hardware PWM ready (chan 0, 50 Hz).')
+                self.get_logger().info(
+                    f'Hardware PWM ready (chip={pwm_chip}, chan={pwm_channel}, 50 Hz).')
             except Exception as e:  # noqa: BLE001
                 self.get_logger().error(
                     f'Hardware PWM unavailable ({e}); running in command-only mode.')
