@@ -209,7 +209,12 @@ def generate_launch_description():
         package='ros_gz_application',
         executable='lidar3d',
         name='lidar3d',
-        output='screen'
+        output='screen',
+        parameters=[{
+            'pwm_chip': 1,       # Pi 5: pwmchip1 is the usable RP1 PWM
+            'uart_port': '/dev/ttyAMA1',
+            'uart_baud': 921600,
+        }],
     )
 
     rviz = Node(

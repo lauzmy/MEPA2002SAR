@@ -201,7 +201,7 @@ class Lidar3D(Node):
         self.declare_parameter('max_angle_deg', 30.0)
         self.declare_parameter('sweep_period_s', 4.0)
         self.declare_parameter('pwm_update_hz', 50.0)
-        self.declare_parameter('pwm_chip', 0)     # 0 on Pi 4, 2 on Pi 5
+        self.declare_parameter('pwm_chip', 1)     # 1 on Pi 5 (pwmchip0 is RP1 internal)
         self.declare_parameter('pwm_channel', 0)  # GPIO12=ch0, GPIO13=ch1
 
         # UART angle feedback
