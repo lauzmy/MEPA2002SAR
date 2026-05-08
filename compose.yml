@@ -33,6 +33,7 @@ services:
       - dialout
       - i2c
       - video
+      - gpio
       - "988"
 
     stdin_open: true
