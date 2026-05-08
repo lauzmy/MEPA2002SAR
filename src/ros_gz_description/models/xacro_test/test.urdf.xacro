@@ -77,10 +77,10 @@
 
   <!-- base_link is the URDF root and the EKF base_link_frame.
        MOLA's launcher always broadcasts a static TF
-         base_link -> base_footprint   (REP-120 direction)
-       so we must NOT also publish base_footprint -> base_link from
+         base_link to base_footprint  (REP-120 direction),
+       so we must NOT also publish base_footprint to base_link from
        the URDF (that would create a TF loop).  base_footprint is
-       therefore not declared in the URDF -- it appears at runtime
+       therefore not declared in the URDF; it appears at runtime
        as a child of base_link via MOLA's static broadcaster. -->
   <link name="base_link"/>
 
