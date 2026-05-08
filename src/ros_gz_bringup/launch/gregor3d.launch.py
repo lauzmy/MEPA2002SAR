@@ -12,10 +12,19 @@ Pipeline:
 
     /wheel/odometry + /imu/data --> ekf_node --> odom -> base_footprint
 
-Frames (URDF):
-    base_footprint -> body_link -> { imu_link, lidar_joint -> laser, ... }
-    NOTE: there is *no* base_link, so MOLA's `mola_tf_base_link` must be
-    set to base_footprint (matches the EKF child frame).
+Frames (URDF + runtime):
+    map           <- mola_lidar_odometry             (REP-105)
+    odom          <- ekf_filter_node                  (world_frame=odom,
+                                                       base_link_frame=base_link)
+    base_link     <- URDF root
+    base_footprint <- mola's static broadcaster        (child of base_link)
+    body_link, imu_link, laser, camera_link, wheels    <- URDF (all rigid)
+
+    NOTE: the LD06 servo nod is *not* a TF joint -- the lidar3d node
+    de-tilts every point internally and publishes the cloud in the
+    level body_link frame.  `lidar_joint` is fixed in the URDF on
+    purpose; do not turn it back into a revolute joint or RViz will
+    show the world tilting around a flat cloud.
 
 Optional 2D projection for Nav2 + explore_lite (`octomap:=true`):
     /lidar3d/points -> octomap_server -> /projected_map (-> /map)
@@ -96,19 +105,11 @@ def generate_launch_description():
         }],
     )
 
-    # joint_state_publisher merges the lidar tilt joint into /joint_states
-    # so the laser TF actually moves (lidar3d publishes /lidar_joint_states
-    # with the *measured* tilt from the UART).
-    joint_state_publisher = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        parameters=[{
-            'use_sim_time': False,
-            'source_list': ['/lidar_joint_states'],
-            'rate': 50,
-        }],
-    )
+    # No joint_state_publisher: every URDF joint is now fixed (the
+    # LD06 tilt is handled inside the lidar3d node, the cloud is
+    # published in level body_link, and we have no wheel encoders
+    # feeding TF on the real robot).  robot_state_publisher alone
+    # is enough to publish the static TF tree.
 
     # ------------------------------------------------------- robot HW + nodes
     allocator_node = Node(
@@ -362,7 +363,6 @@ def generate_launch_description():
         mola_warmup_arg,
         mola_output_dir_arg,
         robot_state_publisher,
-        joint_state_publisher,
         IMU_node,
         allocator_node,
         ldlidar_node,

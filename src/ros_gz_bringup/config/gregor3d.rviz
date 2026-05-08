@@ -39,14 +39,14 @@ Visualization Manager:
         Reliability Policy: Best Effort
         Durability Policy: Volatile
       Style: Points
-      Size (Pixels): 2
+      Size (Pixels): 3
       Decay Time: 6
       Color Transformer: AxisColor
       Axis: Z
       Use Fixed Frame: true
     - Class: rviz_default_plugins/PointCloud2
       Name: MOLA local map
-      Enabled: false
+      Enabled: true
       Topic:
         Value: /mola_lo/local_map_points
         Depth: 5
@@ -55,7 +55,8 @@ Visualization Manager:
         Durability Policy: Volatile
       Style: Points
       Size (Pixels): 1
-      Color Transformer: Intensity
+      Color Transformer: AxisColor
+      Axis: Z
     - Class: rviz_default_plugins/Map
       Name: 2D projected map
       Enabled: true
@@ -78,7 +79,7 @@ Visualization Manager:
         Durability Policy: Volatile
     - Class: rviz_default_plugins/LaserScan
       Name: 2D scan (LD06)
-      Enabled: true
+      Enabled: false
       Topic:
         Value: /scan
         Depth: 5
@@ -88,6 +89,68 @@ Visualization Manager:
       Style: Flat Squares
       Size (m): 0.03
       Color: 255; 25; 0
+    - Class: rviz_default_plugins/Odometry
+      Name: MOLA odometry
+      Enabled: true
+      Topic:
+        Value: /mola_lo/odometry
+        Depth: 100
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+      Position Tolerance: 0.05
+      Angle Tolerance: 0.05
+      Keep: 200
+      Shape: Arrow
+      Color: 0; 200; 255
+      Shaft Length: 0.15
+      Shaft Radius: 0.02
+      Head Length: 0.07
+      Head Radius: 0.04
+      Covariance:
+        Value: false
+    - Class: rviz_default_plugins/Odometry
+      Name: Wheel/EKF odometry
+      Enabled: false
+      Topic:
+        Value: /wheel/odometry
+        Depth: 100
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+      Keep: 100
+      Shape: Arrow
+      Color: 255; 200; 0
+      Shaft Length: 0.10
+      Shaft Radius: 0.015
+      Head Length: 0.05
+      Head Radius: 0.03
+    - Class: rviz_default_plugins/Imu
+      Name: IMU
+      Enabled: false
+      Topic:
+        Value: /imu/data
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+      Acc. vector alpha: 1
+      Acc. vector color: 255; 0; 0
+      Acc. vector scale: 0.1
+      Box alpha: 0.5
+      Box color: 0; 255; 0
+      Enable acceleration: true
+      Enable axes: true
+      Enable box: false
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Explore frontiers
+      Enabled: true
+      Topic:
+        Value: /explore/frontiers
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
   Global Options:
     Background Color: 30; 30; 30
     Fixed Frame: map
@@ -107,14 +170,14 @@ Visualization Manager:
     Current:
       Class: rviz_default_plugins/Orbit
       Name: Orbit
-      Distance: 8
-      Pitch: 0.6
+      Distance: 6
+      Pitch: 0.5
       Yaw: 0.785
-      Target Frame: base_footprint
+      Target Frame: base_link
       Focal Point:
         X: 0
         Y: 0
-        Z: 0
+        Z: 0.1
     Saved: ~
 Window Geometry:
   Height: 900
