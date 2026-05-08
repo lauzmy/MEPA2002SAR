@@ -239,6 +239,18 @@ def generate_launch_description():
             # MOLA only adds map->odom (REP-105 compliant).
             'forward_ros_tf_odom_to_mola': 'True',
             'publish_localization_following_rep105': 'True',
+            # MolaViz (nanogui/OpenGL) segfaults on the Pi 5's aarch64 GL
+            # stack ("VertexArrayObject ... m_state.get().created"), and
+            # because the upstream launch wraps mola-cli with
+            # on_exit=Shutdown() that crash brings the whole bringup down
+            # (lidar3d/allocator/octomap/rviz/explore all die with it).
+            # We don't need MolaViz anyway -- the live cloud + map are
+            # already visualised in our own RViz config.
+            'use_mola_gui': 'False',
+            # We launch our own RViz (gregor3d.rviz); skip the duplicate
+            # one bundled with mola_lidar_odometry to save resources and
+            # avoid two RViz instances fighting for GL on the Pi.
+            'use_rviz': 'False',
         }.items(),
     )
 
