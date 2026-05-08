@@ -14,6 +14,7 @@ build:
 
 up:
 	docker compose up -d
+	-sudo sh -c 'chmod -R a+rw /sys/class/pwm/pwmchip1/ 2>/dev/null' || true
 
 down:
 	docker compose down
@@ -21,6 +22,8 @@ down:
 shell:
 	-sudo chmod a+rw /dev/i2c-1 2>/dev/null || true
 	-sudo chmod a+rw /dev/i2c-4 2>/dev/null || true
+	-sudo chmod a+rw /sys/class/pwm/pwmchip1/export /sys/class/pwm/pwmchip1/unexport 2>/dev/null || true
+	-sudo sh -c 'echo 0 > /sys/class/pwm/pwmchip1/unexport 2>/dev/null; chmod -R a+rw /sys/class/pwm/pwmchip1/' 2>/dev/null || true
 	docker compose exec -u ubuntu -e DISPLAY=$${DISPLAY:-:0} ros2 bash
 
 logs:
