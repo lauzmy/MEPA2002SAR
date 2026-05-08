@@ -223,7 +223,7 @@ def generate_launch_description():
     pkg_mola_lo = get_package_share_directory('mola_lidar_odometry')
     mola_lio_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(pkg_mola_lo, 'ros2-lidar-odometry.launch.py')
+            os.path.join(pkg_mola_lo, 'ros2-launchs', 'ros2-lidar-odometry.launch.py')
         ),
         launch_arguments={
             'lidar_topic_name': '/lidar3d/points',
