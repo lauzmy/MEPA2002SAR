@@ -217,7 +217,10 @@ class Lidar3D(Node):
         self.declare_parameter('cmd_topic', '/lidar_cmd_pos')
         self.declare_parameter('joint_name', 'lidar_joint')
         self.declare_parameter('output_frame', 'body_link')
-        self.declare_parameter('sensor_z_offset_m', 0.032)  # hinge -> laser
+        # body_link  ->  lidar_joint origin (the hinge axis), z only.
+        self.declare_parameter('hinge_z_offset_m', 0.1375)   # = s1 + s5
+        # lidar_hinge_link -> laser, z only.
+        self.declare_parameter('sensor_z_offset_m', 0.032)
         self.declare_parameter('joint_state_rate_hz', 50.0)
 
         sim = bool(self.get_parameter('sim').value)
@@ -234,6 +237,7 @@ class Lidar3D(Node):
         self._joint_name = str(self.get_parameter('joint_name').value)
         self._out_frame = str(self.get_parameter('output_frame').value)
         self._z_off = float(self.get_parameter('sensor_z_offset_m').value)
+        self._hinge_z = float(self.get_parameter('hinge_z_offset_m').value)
 
         uart_port = str(self.get_parameter('uart_port').value)
         uart_baud = int(self.get_parameter('uart_baud').value)
@@ -379,15 +383,17 @@ class Lidar3D(Node):
         x_l = ranges * np.cos(theta)
         y_l = ranges * np.sin(theta)
 
-        # Rotate around Y by `tilt`, then translate +z_off (hinge -> laser).
-        # [ x']   [ cos t  0  sin t ] [ x_l ]
-        # [ y'] = [   0    1    0   ] [ y_l ]
-        # [ z']   [-sin t  0  cos t ] [  0  ] + (0, 0, z_off)
+        # Compose body_link <- laser:
+        #   p_body = (0, 0, hinge_z) + R_tilt * ( (0, 0, sensor_z) + p_laser )
+        # R_tilt is rotation about +Y by `tilt`:
+        #   [ cos t  0  sin t ]
+        #   [   0    1    0   ]
+        #   [-sin t  0  cos t ]
         cos_t = np.cos(tilt)
         sin_t = np.sin(tilt)
-        x = (x_l * cos_t).astype(np.float32)
+        x = (cos_t * x_l + sin_t * self._z_off).astype(np.float32)
         y = y_l.astype(np.float32)
-        z = (-x_l * sin_t + self._z_off).astype(np.float32)
+        z = (-sin_t * x_l + cos_t * self._z_off + self._hinge_z).astype(np.float32)
 
         # Pack into the PointCloud2 byte buffer.
         pts = np.empty(x.size, dtype=np.dtype({
