@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-mola \
     ros-jazzy-mola-state-estimation \
     ros-jazzy-mola-lidar-odometry \
+    ros-jazzy-octomap-server \
  && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x adafruit-extended-bus rpi-lgpio rpi_hardware_pwm
