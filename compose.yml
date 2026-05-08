@@ -33,6 +33,7 @@ services:
       - dialout
       - i2c
       - video
+      - "986"   # pwm (owns /sys/class/pwm/)
       - "988"
 
     stdin_open: true
