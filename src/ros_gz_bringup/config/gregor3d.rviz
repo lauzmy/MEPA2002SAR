@@ -1,0 +1,123 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Cell Size: 1
+      Plane Cell Count: 20
+      Color: 160; 160; 164
+      Enabled: true
+      Reference Frame: map
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: true
+      Show Axes: true
+      Show Arrows: false
+      Marker Scale: 0.4
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Enabled: true
+      Description Topic:
+        Value: /robot_description
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/PointCloud2
+      Name: lidar3d points
+      Enabled: true
+      Topic:
+        Value: /lidar3d/points
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+      Style: Points
+      Size (Pixels): 2
+      Decay Time: 6
+      Color Transformer: AxisColor
+      Axis: Z
+      Use Fixed Frame: true
+    - Class: rviz_default_plugins/PointCloud2
+      Name: MOLA local map
+      Enabled: false
+      Topic:
+        Value: /mola_lo/local_map_points
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+      Style: Points
+      Size (Pixels): 1
+      Color Transformer: Intensity
+    - Class: rviz_default_plugins/Map
+      Name: 2D projected map
+      Enabled: true
+      Topic:
+        Value: /projected_map
+        Depth: 1
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+      Color Scheme: map
+      Alpha: 0.6
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Octomap occupied
+      Enabled: false
+      Topic:
+        Value: /occupied_cells_vis_array
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+    - Class: rviz_default_plugins/LaserScan
+      Name: 2D scan (LD06)
+      Enabled: true
+      Topic:
+        Value: /scan
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+      Style: Flat Squares
+      Size (m): 0.03
+      Color: 255; 25; 0
+  Global Options:
+    Background Color: 30; 30; 30
+    Fixed Frame: map
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/SetInitialPose
+      Topic:
+        Value: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Value: /goal_pose
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Orbit
+      Distance: 8
+      Pitch: 0.6
+      Yaw: 0.785
+      Target Frame: base_footprint
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+    Saved: ~
+Window Geometry:
+  Height: 900
+  Width: 1600
+  Hide Left Dock: false
+  Hide Right Dock: false
