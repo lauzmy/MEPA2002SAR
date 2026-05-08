@@ -218,9 +218,9 @@ class Lidar3D(Node):
         self.declare_parameter('joint_name', 'lidar_joint')
         self.declare_parameter('output_frame', 'body_link')
         # body_link  ->  lidar_joint origin (the hinge axis), z only.
-        self.declare_parameter('hinge_z_offset_m', 0.1375)   # = s1 + s5
+        self.declare_parameter('hinge_z_offset_m', 0.06285)   # = s1 + s5
         # lidar_hinge_link -> laser, z only.
-        self.declare_parameter('sensor_z_offset_m', 0.032)
+        self.declare_parameter('sensor_z_offset_m', 0.03315)
         self.declare_parameter('joint_state_rate_hz', 50.0)
 
         sim = bool(self.get_parameter('sim').value)
