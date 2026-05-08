@@ -228,9 +228,12 @@ def generate_launch_description():
         launch_arguments={
             'lidar_topic_name': '/lidar3d/points',
             'imu_topic_name': '/imu/data',
-            # No `base_link` in this URDF, but `base_footprint` is the EKF
-            # child and the root of the kinematic chain -- use it.
-            'mola_tf_base_link': 'base_footprint',
+            # URDF chain is base_footprint -> base_link -> body_link -> ...
+            # MOLA's launcher always broadcasts a static TF
+            #   base_footprint -> <mola_tf_base_link>
+            # so these two MUST be different names, otherwise we get the
+            # 'TF_SELF_TRANSFORM ... base_footprint' spam and a broken tree.
+            'mola_tf_base_link': 'base_link',
             'use_imu_for_lio': 'True',
             # Let robot_localization keep ownership of odom->base_footprint;
             # MOLA only adds map->odom (REP-105 compliant).
