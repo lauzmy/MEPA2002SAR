@@ -90,10 +90,10 @@
                       <- this URDF (all rigidly attached to base_link
                          via body_link)
        ============================================================ -->
-  <link name="base_link"/>
+  <link name="base_footprint"/>
 
   <joint name="body_link_joint" type="fixed">
-    <parent link="base_link"/>
+    <parent link="base_footprint"/>
     <child link="body_link"/>
   </joint>
 
