@@ -36,5 +36,7 @@ services:
       - "986"   # pwm (owns /sys/class/pwm/)
       - "988"
 
+    ipc: host
+
     stdin_open: true
     tty: true
