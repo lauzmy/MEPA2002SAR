@@ -26,7 +26,8 @@
   <depend>ros_gz_bridge</depend>
   <depend>ros_gz_application</depend>
   <depend>camera_ros</depend>
-  <depend>ldlidar</depend> 
+  <depend>ldlidar</depend>
+  <exec_depend>gregor_description</exec_depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
