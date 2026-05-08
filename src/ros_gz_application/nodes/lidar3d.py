@@ -251,6 +251,15 @@ class Lidar3D(Node):
         self._pwm = None
         if not sim:
             try:
+                # Unexport first so a previous crash doesn't leave the channel
+                # locked (kernel returns EBUSY on re-export otherwise).
+                unexport = (f'/sys/class/pwm/pwmchip{pwm_chip}/unexport')
+                try:
+                    with open(unexport, 'w') as f:
+                        f.write(str(pwm_channel))
+                except OSError:
+                    pass  # not exported yet -- that's fine
+
                 from rpi_hardware_pwm import HardwarePWM
                 self._pwm = HardwarePWM(pwm_channel=pwm_channel, hz=50, chip=pwm_chip)
                 self._pwm.start(0)
