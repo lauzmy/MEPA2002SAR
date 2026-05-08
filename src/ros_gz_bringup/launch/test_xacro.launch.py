@@ -94,25 +94,18 @@ def generate_launch_description():
         output='screen'
     )
 
-    lidar_sweeper = Node(
+    lidar3d = Node(
         package='ros_gz_application',
-        executable='lidar_sweeper',
-        name='lidar_sweeper',
-        output='screen'
-    )
-
-    laser_assembler_node = Node(
-        package='ros_gz_application',
-        executable='laser_assembler',
-        name='tilt_laser_assembler',
+        executable='lidar3d',
+        name='lidar3d',
         output='screen',
         parameters=[{
-            'use_sim_time': True # VIKTIG for at TF2 og klokken skal synkroniseres med Gazebo
+            'sim': True,                # no hardware PWM in Gazebo
+            'use_sim_time': True,       # sync TF2 + clock with Gazebo
+            'scan_topic': '/scan',
+            'cloud_topic': '/lidar3d/points',
+            'output_frame': 'body_link',
         }],
-        remappings=[
-            # Noden din lytter til '/scan', og Gazebo-bridgen publiserer også til '/scan'
-            ('/scan', '/scan') 
-        ]
     )
 
     YOLO_node = Node(

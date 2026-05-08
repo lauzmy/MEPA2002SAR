@@ -1,13 +1,13 @@
 """Standalone test bringup for the tilted-LD06 -> 3D pointcloud pipeline.
 
-Brings up only what is strictly required to test the sweeper + assembler
-on the real robot (or with a recorded /scan bag):
+Brings up only what is strictly required to test the unified lidar3d
+node on the real robot (or with a recorded /scan bag):
 
-  * robot_state_publisher  (for the laser <-> base_footprint TF)
-  * joint_state_publisher  (merges /lidar_joint_states from sweeper)
+  * robot_state_publisher  (for the laser <-> body_link TF)
+  * joint_state_publisher  (merges /lidar_joint_states from lidar3d)
   * ldlidar driver         (publishes /scan)         -- optional
-  * lidar_sweeper          (drives the servo)
-  * laser_assembler        (publishes /lidar3d/points)
+  * lidar3d                (sweeps the servo, reads UART, publishes
+                            /lidar3d/points)
   * rviz2                  -- optional
 
 Usage:
@@ -36,17 +36,9 @@ def generate_launch_description():
     sim_arg = DeclareLaunchArgument(
         'sim', default_value='false',
         description='If true, do not drive the hardware PWM (servo).')
-    settle_arg = DeclareLaunchArgument(
-        'settle_time_s', default_value='0.08',
-        description='Time the sweeper waits for the servo to physically '
-                    'reach a new step before scans are accepted.')
-    hold_arg = DeclareLaunchArgument(
-        'hold_time_s', default_value='0.15',
-        description='Time the servo is held still at each step. Must be '
-                    '>= one LD06 revolution (100 ms).')
-    step_arg = DeclareLaunchArgument(
-        'step_deg', default_value='3.0',
-        description='Tilt step size in degrees per stop.')
+    sweep_period_arg = DeclareLaunchArgument(
+        'sweep_period_s', default_value='4.0',
+        description='Period of the continuous tilt triangle sweep.')
     lidar_arg = DeclareLaunchArgument(
         'lidar', default_value='true',
         description='Start the ldlidar driver. Set false when replaying a bag.')
@@ -77,7 +69,7 @@ def generate_launch_description():
     )
 
     # joint_state_publisher merges the tilt-joint state coming from
-    # lidar_sweeper into /joint_states so the laser TF actually moves.
+    # lidar3d into /joint_states so the laser TF actually moves.
     joint_state_publisher = Node(
         package='joint_state_publisher',
         executable='joint_state_publisher',
@@ -104,38 +96,25 @@ def generate_launch_description():
         condition=IfCondition(use_lidar),
     )
 
-    # --- Sweeper + assembler ---------------------------------------------
-    lidar_sweeper = Node(
+    # --- Unified 3D lidar node -------------------------------------------
+    lidar3d = Node(
         package='ros_gz_application',
-        executable='lidar_sweeper',
-        name='lidar_sweeper',
+        executable='lidar3d',
+        name='lidar3d',
         output='screen',
         parameters=[{
             'sim': sim,
             'min_angle_deg': -30.0,
             'max_angle_deg': 30.0,
-            'step_deg': LaunchConfiguration('step_deg'),
-            'settle_time_s': LaunchConfiguration('settle_time_s'),
-            'hold_time_s': LaunchConfiguration('hold_time_s'),
-            'joint_name': 'lidar_joint',
-            'joint_state_topic': '/lidar_joint_states',
-            'hold_state_topic': '/lidar_hold_state',
-            'cmd_topic': '/lidar_cmd_pos',
-        }],
-    )
-
-    laser_assembler = Node(
-        package='ros_gz_application',
-        executable='laser_assembler',
-        name='tilt_laser_assembler',
-        output='screen',
-        parameters=[{
-            'use_sim_time': False,
+            'sweep_period_s': LaunchConfiguration('sweep_period_s'),
             'scan_topic': '/scan',
             'cloud_topic': '/lidar3d/points',
-            'hold_state_topic': '/lidar_hold_state',
-            'output_frame': 'base_footprint',
-            'settle_guard_s': 0.02,
+            'joint_state_topic': '/lidar_joint_states',
+            'cmd_topic': '/lidar_cmd_pos',
+            'joint_name': 'lidar_joint',
+            'output_frame': 'body_link',
+            'uart_port': '/dev/ttyAMA1',
+            'uart_baud': 921600,
         }],
     )
 
@@ -154,13 +133,10 @@ def generate_launch_description():
         lidar_arg,
         rviz_arg,
         serial_port_arg,
-        settle_arg,
-        hold_arg,
-        step_arg,
+        sweep_period_arg,
         robot_state_publisher,
         joint_state_publisher,
         ldlidar_node,
-        lidar_sweeper,
-        laser_assembler,
+        lidar3d,
         rviz,
     ])

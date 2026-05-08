@@ -205,10 +205,10 @@ def generate_launch_description():
     )
 
     # 6. Din egendefinerte kode
-    lidar_sweeper = Node(
+    lidar3d = Node(
         package='ros_gz_application',
-        executable='lidar_sweeper',
-        name='lidar_sweeper',
+        executable='lidar3d',
+        name='lidar3d',
         output='screen'
     )
 

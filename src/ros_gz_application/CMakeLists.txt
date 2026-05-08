@@ -10,21 +10,9 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-	nodes/lidar_sweeper.py
+	nodes/lidar3d.py
 	DESTINATION lib/${PROJECT_NAME}
-	RENAME lidar_sweeper
-)
-
-install(PROGRAMS
-	nodes/laser_assembler.py
-	DESTINATION lib/${PROJECT_NAME}
-	RENAME laser_assembler
-)
-
-install(PROGRAMS
-	nodes/lidar_settle_calibrator.py
-	DESTINATION lib/${PROJECT_NAME}
-	RENAME lidar_settle_calibrator
+	RENAME lidar3d
 )
 
 install(PROGRAMS
