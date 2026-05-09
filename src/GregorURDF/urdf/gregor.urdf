@@ -171,7 +171,7 @@
             </geometry>
         </collision>
     </link>
-    <link name="laser_link">
+    <link name="laser">
         <inertial>
             <origin xyz="4.4217194528593795e-09 -3.611384859214528e-09 0.015204879071300024" rpy="0.0 -0.0 0.0" />
             <mass value="0.07569091272999597" />
@@ -399,7 +399,7 @@
     <joint name="lidar_mount_to_laser" type="fixed">
         <origin xyz="0.0061499999999999845 -2.106999999999998e-05 3.1225022567582527e-19" rpy="-1.0868129502412381e-47 1.570796326794895 0" />
         <parent link="lidar_mount_link" />
-        <child link="laser_link" />
+        <child link="laser" />
     </joint>
     <joint name="upper_level_to_camera" type="fixed">
         <origin xyz="-0.03049246 -0.057249999999999995 0.056499999999999995" rpy="1.570796326794901 -0.0 1.6472184286297693e-83" />
