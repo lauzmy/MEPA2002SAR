@@ -23,9 +23,9 @@ class CollisionAvoidance(Node):
 
         # Range uses meters, so publish a small distance when blocked and max range when clear.
         self.obstacle_range = 0.05
-        self.clear_range = 2.0
+        self.range_max = 2.0
         self.range_min = 0.02
-        self.range_max = self.clear_range
+       
 
         GPIO.setmode(GPIO.BCM)
         for pin in self.sensor_pins:
@@ -45,7 +45,14 @@ class CollisionAvoidance(Node):
             msg.field_of_view = 0.2
             msg.min_range = self.range_min
             msg.max_range = self.range_max
-            msg.range = self.obstacle_range if obstacle_detected else self.clear_range
+
+            if obstacle_detected:
+                msg.range = self.obstacle_range
+                self.get_logger().info('Obstacle detected by %s sensor!' % name)
+            else:   
+                msg.range = self.range_max
+                self.get_logger().info('No obstacle detected by %s sensor.' % name)
+        
             if name == 'front':
                 self.pub_front.publish(msg)
             elif name == 'right':
@@ -55,7 +62,6 @@ class CollisionAvoidance(Node):
             elif name == 'rear':
                 self.pub_rear.publish(msg)
 
-            self.get_logger().info('Published IR sensor readings: %s' % name)
 
     def destroy_node(self):
         GPIO.cleanup()
