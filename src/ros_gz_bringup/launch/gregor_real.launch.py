@@ -73,7 +73,7 @@ def generate_launch_description():
         parameters=[
             {'serial_port': '/dev/ttyAMA0'},
             {'topic_name': '/scan'},
-            {'frame_id': 'LD06_LiDAR'},  # Matcher link-navnet i gregor.urdf
+            {'frame_id': 'laser_link'},
             {'lidar_type': 'LD06'}
         ]
     )
@@ -84,7 +84,7 @@ def generate_launch_description():
         name='camera_node',
         parameters=[
             {'video_device': '/dev/video0'},
-            {'frame_id': 'RGB-Camera'},  # Matcher link-navnet i gregor.urdf
+            {'frame_id': 'camera_link'},
             {'image_width': 640},
             {'image_height': 480},
             {'framerate': 25.0},

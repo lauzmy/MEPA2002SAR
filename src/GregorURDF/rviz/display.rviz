@@ -18,7 +18,7 @@ Visualization Manager:
       Name: TF
       Enabled: true
   Global Options:
-    Fixed Frame: Chassie
+    Fixed Frame: base_footprint
     Background Color: 48; 48; 48
   Tools:
     - Class: rviz_default_plugins/MoveCamera
