@@ -145,7 +145,7 @@ def generate_launch_description():
     )
 
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
-    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'IRL', 'nav2_params_smacHybrid.yaml')
+    nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'IRL', 'nav2_params_smac2D.yaml')
 
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
