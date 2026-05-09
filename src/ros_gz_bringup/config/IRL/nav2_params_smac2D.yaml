@@ -289,11 +289,32 @@ collision_monitor:
     transform_tolerance: 0.5
     source_timeout: 1.0
     stop_pub_timeout: 2.0
-    observation_sources: ["scan"]
+    observation_sources: ["scan", "front_ir", "rear_ir", "left_ir", "right_ir"]
     scan:
       type: "scan"
       topic: "/scan"
       enabled: True
+      obstacle_angle: 0.2 
+    front_ir:
+      type: "ir"
+      topic: "/ir/front"
+      enabled: True
+      obstacle_angle: 0.2
+    rear_ir:
+      type: "ir"
+      topic: "/ir/rear"
+      enabled: True
+      obstacle_angle: 0.2
+    left_ir:
+      type: "ir"
+      topic: "/ir/left"
+      enabled: True
+      obstacle_angle: 0.2
+    right_ir:
+      type: "ir"
+      topic: "/ir/right"
+      enabled: True 
+      obstacle_angle: 0.2
     polygons: ["slowdown_polygon"]
     slowdown_polygon:
       type: "polygon"

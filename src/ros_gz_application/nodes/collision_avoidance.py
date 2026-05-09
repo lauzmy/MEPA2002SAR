@@ -32,7 +32,8 @@ class CollisionAvoidance(Node):
         self.rear_line = self.setup_gpio(self.rear_pin, 'rear')
 
         # Sensor config
-        self.obstacle_range = 0.05
+        self.obstacle_range = 0.06
+        self.obstacle_range_rearAfront = 0.05
         self.range_min = 0.02
         self.range_max = 0.10
 
@@ -61,7 +62,7 @@ class CollisionAvoidance(Node):
         if obstacle_detected:
             msg.range = self.obstacle_range
         else:
-            msg.range = self.range_max
+            msg.range = float('inf')
 
         return msg
 
