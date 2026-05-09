@@ -1,0 +1,490 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="gregor">
+    <link name="upper_level_link">
+        <inertial>
+            <origin xyz="-0.0013615270577073788 -0.0023967975342630093 0.03779211299373483" rpy="0.0 -0.0 1.6472184286297693e-83" />
+            <mass value="0.13651212208139799" />
+            <inertia ixx="0.0001804964831914049" iyy="0.00034273020952990283" izz="0.0002991734068482312" ixy="7.909173062566343e-07" iyz="3.2060969076702864e-06" ixz="2.1069572796448444e-05" />
+        </inertial>
+        <visual name="Upper-Level_visual">
+            <origin xyz="-3.3478478050907866e-09 0.00799999554178096 -0.007999999999999856" rpy="-3.794496158523444e-65 -3.2526065174565133e-19 7.888609052210122e-31" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Upper-Level.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Upper-Level_collision">
+            <origin xyz="-3.3478478050907866e-09 0.00799999554178096 -0.007999999999999856" rpy="-3.794496158523444e-65 -3.2526065174565133e-19 7.888609052210122e-31" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Upper-Level.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="battery_link">
+        <inertial>
+            <origin xyz="-3.660772201225654e-09 4.458219039493727e-09 0.017923845987170874" rpy="0.0 -0.0 -1.6472184286297693e-83" />
+            <mass value="0.09697089693767996" />
+            <inertia ixx="2.0465585706148432e-05" iyy="4.909153441573475e-05" izz="4.8776595215212305e-05" ixy="1.4050489884825728e-20" iyz="-1.7787691892340307e-20" ixz="-1.6675961149069038e-20" />
+        </inertial>
+        <visual name="Battery_visual">
+            <origin xyz="-0.000250003664497484 -0.008749995672166123 -1.4210854715202004e-16" rpy="3.141592653589793 3.2526065174565133e-19 -7.888609052210122e-31" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Battery.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Battery_collision">
+            <origin xyz="-0.000250003664497484 -0.008749995672166123 -1.4210854715202004e-16" rpy="3.141592653589793 3.2526065174565133e-19 -7.888609052210122e-31" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Battery.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="camera_link">
+        <inertial>
+            <origin xyz="0.016000001679936527 -0.016000000000072526 0.003779157752404769" rpy="0.0 -0.0 0.0" />
+            <mass value="0.00705801985514185" />
+            <inertia ixx="4.609687050848352e-07" iyy="4.60968707459797e-07" izz="7.385686762800218e-07" ixy="-6.776263578034404e-20" iyz="-1.4217825598791448e-18" ixz="-1.5335550592183276e-20" />
+        </inertial>
+        <visual name="RGB-Camera_visual">
+            <origin xyz="0.050000001679936325 -0.001999999999999833 0.0025000044582184524" rpy="-4.010680676458444e-15 6.59532016963757e-16 1.5707963267949032" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/RGB-Camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="RGB-Camera_collision">
+            <origin xyz="0.050000001679936325 -0.001999999999999833 0.0025000044582184524" rpy="-4.010680676458444e-15 6.59532016963757e-16 1.5707963267949032" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/RGB-Camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="range_front_link">
+        <inertial>
+            <origin xyz="-0.012750001333232156 0.010750000953176748 -0.0054999999999998566" rpy="0.0 -0.0 1.6472184286297693e-83" />
+            <mass value="0.011156887500000002" />
+            <inertia ixx="5.422712195311233e-07" iyy="7.170624570312495e-07" izz="1.0343364453123285e-06" ixy="1.938084175211744e-21" iyz="-2.710505431213761e-20" ixz="-2.6733443421948163e-22" />
+        </inertial>
+        <visual name="Avstands-sensor-fremme_visual">
+            <origin xyz="-0.0129000016148641 0.14062201013038517 0.005000000000000142" rpy="1.9916470802444676e-35 -3.2526065174565133e-19 -6.12323399573669e-17" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-fremme.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-fremme_collision">
+            <origin xyz="-0.0129000016148641 0.14062201013038517 0.005000000000000142" rpy="1.9916470802444676e-35 -3.2526065174565133e-19 -6.12323399573669e-17" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-fremme.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="base_link">
+        <inertial>
+            <origin xyz="0.0005701965615616621 -0.0010046150242972963 0.0033131328971587404" rpy="0.0 0.0 0.0" />
+            <mass value="0.29216485565837275" />
+            <inertia ixx="0.0012934383167361666" iyy="0.0002587202266002616" izz="0.001518800130227781" ixy="-8.673015164490162e-06" iyz="-1.7133567740383467e-05" ixz="-1.958806141146993e-06" />
+        </inertial>
+        <visual name="Chassie_visual">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Chassie.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Chassie_collision">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Chassie.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="range_rear_link">
+        <inertial>
+            <origin xyz="0.012750001724095152 0.01074999986961485 0.0054999999999998566" rpy="0.0 -0.0 -1.6472184286297693e-83" />
+            <mass value="0.011156887500000002" />
+            <inertia ixx="5.422712195312046e-07" iyy="7.170624570312563e-07" izz="1.0343364453124098e-06" ixy="1.0587911840678754e-22" iyz="-6.776263578034403e-21" ixz="-2.9116757561866574e-22" />
+        </inertial>
+        <visual name="Avstands-sensor-bak_visual">
+            <origin xyz="0.012730001117552694 0.12549999986961485 -0.00800000000000014" rpy="-3.141592653589793 3.2526065174565133e-19 6.12323399573669e-17" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-bak.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-bak_collision">
+            <origin xyz="0.012730001117552694 0.12549999986961485 -0.00800000000000014" rpy="-3.141592653589793 3.2526065174565133e-19 6.12323399573669e-17" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-bak.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="thermal_camera_link">
+        <inertial>
+            <origin xyz="-0.010365234966222719 -0.012620736087732034 0.001775934788108966" rpy="0.0 1.6472184286297693e-83 0.0" />
+            <mass value="0.0030870822826619742" />
+            <inertia ixx="1.8939559948378886e-07" iyy="1.3505520334223435e-07" izz="3.056714957070319e-07" ixy="-1.6358478454441547e-10" iyz="-1.2836761587891639e-08" ixz="-8.936618533925193e-11" />
+        </inertial>
+        <visual name="Thermal-camera_visual">
+            <origin xyz="-0.020715597320063752 -0.026350599999999887 0.0020000044582192443" rpy="-8.326672684688202e-17 -2.7825026726704055e-14 3.2526065174565133e-19" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Thermal-camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Thermal-camera_collision">
+            <origin xyz="-0.020715597320063752 -0.026350599999999887 0.0020000044582192443" rpy="-8.326672684688202e-17 -2.7825026726704055e-14 3.2526065174565133e-19" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Thermal-camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="range_left_link">
+        <inertial>
+            <origin xyz="-0.01075000215575482 -0.012750004398614368 -0.0054999976746497835" rpy="0.0 -0.0 1.6472184286297693e-83" />
+            <mass value="0.0111568875" />
+            <inertia ixx="7.170624570312529e-07" iyy="5.422712195312588e-07" izz="1.0343364453125454e-06" ixy="-3.0704944337968387e-21" iyz="2.3822801641527197e-22" ixz="-1.3552527156068805e-20" />
+        </inertial>
+        <visual name="Avstands-sensor-venstre_visual">
+            <origin xyz="0.01910498615509802 0.013462007506596986 -0.00019999767464979002" rpy="1.1069704181076984e-16 -1.5019319532320805e-30 1.5707963267948968" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-venstre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-venstre_collision">
+            <origin xyz="0.01910498615509802 0.013462007506596986 -0.00019999767464979002" rpy="1.1069704181076984e-16 -1.5019319532320805e-30 1.5707963267948968" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-venstre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="motor_fr_link">
+        <inertial>
+            <origin xyz="1.7319479184152443e-16 -9.573994486089532e-10 -0.024942724477164113" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.6712475404684502e-05" iyy="2.6712475404642923e-05" izz="1.2042060245804958e-05" ixy="1.0842021724855044e-19" iyz="-8.673617379884035e-19" ixz="2.710505431213761e-20" />
+        </inertial>
+        <visual name="Motor-FR_visual">
+            <origin xyz="-0.02006216406509751 -9.400060907438501e-10 -0.001982999281018989" rpy="3.421138828918009e-49 1.5707963267948966 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-FR_collision">
+            <origin xyz="-0.02006216406509751 -9.400060907438501e-10 -0.001982999281018989" rpy="3.421138828918009e-49 1.5707963267948966 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="laser">
+        <inertial>
+            <origin xyz="4.4217194528593795e-09 -3.611384859214528e-09 0.015204879071300024" rpy="0.0 -0.0 0.0" />
+            <mass value="0.07569091272999597" />
+            <inertia ixx="1.4437097944559104e-05" iyy="1.4437097944852706e-05" izz="1.572243612429717e-05" ixy="1.5707038664559534e-07" iyz="1.832979297858306e-18" ixz="-1.9905274260476058e-20" />
+        </inertial>
+        <visual name="LD06_LiDAR_visual">
+            <origin xyz="4.421719453709394e-09 -3.6113874780918654e-09 1.3756625882876962e-09" rpy="1.5707963267948966 -5.686640394686481e-16 3.14159265358979" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/LD06_LiDAR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="LD06_LiDAR_collision">
+            <origin xyz="4.421719453709394e-09 -3.6113874780918654e-09 1.3756625882876962e-09" rpy="1.5707963267948966 -5.686640394686481e-16 3.14159265358979" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/LD06_LiDAR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="imu_link">
+        <inertial>
+            <origin xyz="-3.303144319732887e-09 -4.458219037412059e-09 0.000500000000000096" rpy="0.0 -0.0 1.6472184286297693e-83" />
+            <mass value="0.0003552000152170653" />
+            <inertia ixx="7.607200749330669e-09" iyy="4.292000310903334e-09" izz="1.184000105769632e-08" ixy="-3.0825402514671422e-24" iyz="1.9852334701272664e-23" ixz="-1.1166938269465874e-23" />
+        </inertial>
+        <visual name="IMU_visual">
+            <origin xyz="-3.3031445828210494e-09 0.007999995541780977 -0.04834999999999985" rpy="-3.794496158523444e-65 -3.2526065174565133e-19 7.888609052210122e-31" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/IMU.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="IMU_collision">
+            <origin xyz="-3.3031445828210494e-09 0.007999995541780977 -0.04834999999999985" rpy="-3.794496158523444e-65 -3.2526065174565133e-19 7.888609052210122e-31" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/IMU.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="wheel_fl_link">
+        <inertial>
+            <origin xyz="-0.000322364933043513 0.00017061718757420687 0.02654446444839245" rpy="0.0 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.283177074565066e-05" iyy="7.282825505949375e-05" izz="9.244372507348432e-05" ixy="-3.222950352183441e-09" iyz="-3.167765778544192e-07" ixz="1.4647440809903564e-07" />
+        </inertial>
+        <visual name="Mecanum-wheel-FL_visual">
+            <origin xyz="-0.03738974153915106 -0.03522473364481624 0.10002300971390468" rpy="-1.5707963267948988 -0.7853981633974557 -1.570796326794897" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-FL_collision">
+            <origin xyz="-0.03738974153915106 -0.03522473364481624 0.10002300971390468" rpy="-1.5707963267948988 -0.7853981633974557 -1.570796326794897" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="lidar_mount_link">
+        <inertial>
+            <origin xyz="-0.0010789646894884975 -2.067058956080045e-05 3.2563265073865554e-05" rpy="1.9721522630525295e-31 -0.0 1.0947644252537629e-47" />
+            <mass value="0.025423989422360332" />
+            <inertia ixx="6.28088747813872e-06" iyy="3.699081704242892e-06" izz="3.459604935220987e-06" ixy="-1.1055542338227753e-11" iyz="-1.7117748145411085e-11" ixz="-8.933844679079349e-10" />
+        </inertial>
+        <visual name="LiDAR-Mount_visual">
+            <origin xyz="0.006150001375662573 -2.1073611387482927e-05 -4.421719451176698e-09" rpy="3.141592653589793 -1.570796326794895 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/LiDAR-Mount.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="LiDAR-Mount_collision">
+            <origin xyz="0.006150001375662573 -2.1073611387482927e-05 -4.421719451176698e-09" rpy="3.141592653589793 -1.570796326794895 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/LiDAR-Mount.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="wheel_rl_link">
+        <inertial>
+            <origin xyz="-0.0003223649330433842 -0.0001706147432024441 -0.026544460526042205" rpy="-6.908934844075556e-77 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.28317707456435e-05" iyy="7.282825505949397e-05" izz="9.244372507349061e-05" ixy="3.2229503574960315e-09" iyz="-3.1677657785680446e-07" ixz="-1.4647440810407718e-07" />
+        </inertial>
+        <visual name="Mecanum-wheel-RL_visual">
+            <origin xyz="-0.03738974153915006 0.03522473608918915 -0.10002300579155401" rpy="1.5707963267948897 0.7853981633974413 1.5707963267948857" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-RL_collision">
+            <origin xyz="-0.03738974153915006 0.03522473608918915 -0.10002300579155401" rpy="1.5707963267948897 0.7853981633974413 1.5707963267948857" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="wheel_rr_link">
+        <inertial>
+            <origin xyz="-0.00032236493304357074 0.00017061624033782864 0.026544461164959215" rpy="0.0 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.283177074564285e-05" iyy="7.282825505949917e-05" izz="9.244372507348627e-05" ixy="-3.2229503554360474e-09" iyz="-3.1677657785626236e-07" ixz="1.464744080993609e-07" />
+        </inertial>
+        <visual name="Mecanum-wheel-RR_visual">
+            <origin xyz="-0.03738974153915103 -0.035224734592058 0.10002300643046887" rpy="-1.570796326794897 -0.7853981633973823 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-RR_collision">
+            <origin xyz="-0.03738974153915103 -0.035224734592058 0.10002300643046887" rpy="-1.570796326794897 -0.7853981633973823 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="wheel_fr_link">
+        <inertial>
+            <origin xyz="-0.00032236493304340643 -0.00017061407967212006 -0.026544461164959312" rpy="0.0 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.28317707456229e-05" iyy="7.282825505949288e-05" izz="9.244372507348974e-05" ixy="3.2229503525087015e-09" iyz="-3.1677657785355185e-07" ixz="-1.4647440809545777e-07" />
+        </inertial>
+        <visual name="Mecanum-wheel-FR_visual">
+            <origin xyz="-0.03738974153915088 0.035224736752716305 -0.10002300643047334" rpy="1.5707963267948923 0.7853981633974878 1.570796326794898" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-FR_collision">
+            <origin xyz="-0.03738974153915088 0.035224736752716305 -0.10002300643047334" rpy="1.5707963267948923 0.7853981633974878 1.570796326794898" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="range_right_link">
+        <inertial>
+            <origin xyz="0.010750003762234348 0.012750003968667798 -0.005499999999999892" rpy="0.0 -0.0 1.6472184286297693e-83" />
+            <mass value="0.0111568875" />
+            <inertia ixx="7.170624570312529e-07" iyy="5.422712195312317e-07" izz="1.0343364453125047e-06" ixy="5.823351512373315e-22" iyz="6.088049308390284e-22" ixz="-6.776263578034403e-21" />
+        </inertial>
+        <visual name="Avstands-sensor-høyre_visual">
+            <origin xyz="-0.019104984548618517 -0.013462007936543584 -0.00019999999999989804" rpy="3.2526065174360214e-19 4.8572257327350605e-17 -1.5707963267948966" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-høyre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-høyre_collision">
+            <origin xyz="-0.019104984548618517 -0.013462007936543584 -0.00019999999999989804" rpy="3.2526065174360214e-19 4.8572257327350605e-17 -1.5707963267948966" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-høyre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="motor_rl_link">
+        <inertial>
+            <origin xyz="-8.881784197001253e-18 -2.938675969232918e-10 -0.024942725116081053" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.6712475404684502e-05" iyy="2.671247540464287e-05" izz="1.2042060245804308e-05" ixy="-5.421010862427522e-20" iyz="-9.215718466126788e-19" ixz="-2.710505431213761e-20" />
+        </inertial>
+        <visual name="Motor-RL_visual">
+            <origin xyz="-0.020062164065097678 -2.7647436340316746e-10 -0.0019829999199359525" rpy="-3.421138828918011e-49 1.5707963267948906 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-RL_collision">
+            <origin xyz="-0.020062164065097678 -2.7647436340316746e-10 -0.0019829999199359525" rpy="-3.421138828918011e-49 1.5707963267948906 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="motor_rr_link">
+        <inertial>
+            <origin xyz="1.2878587085651815e-16 -1.2032691287799936e-09 0.024942724477164085" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.671247540468461e-05" iyy="2.6712475404643194e-05" izz="1.2042060245804525e-05" ixy="-1.6263032587282567e-19" iyz="-1.0299920638612292e-18" ixz="-8.131516293641283e-20" />
+        </inertial>
+        <visual name="Motor-RR_visual">
+            <origin xyz="-0.020062164065097574 -1.2206624955268808e-09 0.0019829992810189625" rpy="3.141592653589793 -1.5707963267948966 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-RR_collision">
+            <origin xyz="-0.020062164065097574 -1.2206624955268808e-09 0.0019829992810189625" rpy="3.141592653589793 -1.5707963267948966 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="motor_fl_link">
+        <inertial>
+            <origin xyz="1.1990408665951691e-16 2.1505034020208314e-09 -0.02494272119373086" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.671247540468407e-05" iyy="2.671247540464287e-05" izz="1.2042060245804091e-05" ixy="1.0842021724855044e-19" iyz="-1.0299920638612292e-18" ixz="-1.2861589067647148e-39" />
+        </inertial>
+        <visual name="Motor-FL_visual">
+            <origin xyz="-0.020062164065097535 2.16789691975805e-09 -0.0019829959975857393" rpy="-1.5777218104420233e-30 1.5707963267948901 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-FL_collision">
+            <origin xyz="-0.020062164065097535 2.16789691975805e-09 -0.0019829959975857393" rpy="-1.5777218104420233e-30 1.5707963267948901 0" />
+            <geometry>
+                <mesh filename="package://gregor_description/meshes/Motor-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="base_link_to_battery" type="fixed">
+        <origin xyz="0.00015423000372529028 -0.007561000130385162 -1.509903313490213e-16" rpy="3.141592653589793 3.252606517456514e-19 -7.888609052210118e-31" />
+        <parent link="base_link" />
+        <child link="battery_link" />
+    </joint>
+    <joint name="base_link_to_upper_level" type="fixed">
+        <origin xyz="0.00015423000372529028 -0.007561000130385162 0.007999999999999848" rpy="-2.563333722837743e-49 3.252606517456514e-19 -7.888609052210118e-31" />
+        <parent link="base_link" />
+        <child link="upper_level_link" />
+    </joint>
+    <joint name="upper_level_to_lidar_mount" type="continuous">
+        <origin xyz="-3.5119999999999996e-05 -4.479000000000011e-05 0.08375145" rpy="-1.6514567491299184e-15 -1.5707963267948966 0" />
+        <parent link="upper_level_link" />
+        <child link="lidar_mount_link" />
+        <axis xyz="-5.551115123125929e-17 -1.6514567491299192e-15 1.0000000000000004" />
+    </joint>
+    <joint name="lidar_mount_to_laser" type="fixed">
+        <origin xyz="0.0061499999999999845 -2.106999999999998e-05 3.1225022567582527e-19" rpy="-1.0868129502412381e-47 1.570796326794895 0" />
+        <parent link="lidar_mount_link" />
+        <child link="laser" />
+    </joint>
+    <joint name="upper_level_to_camera" type="fixed">
+        <origin xyz="-0.03049246 -0.057249999999999995 0.056499999999999995" rpy="1.570796326794901 -0.0 1.6472184286297693e-83" />
+        <parent link="upper_level_link" />
+        <child link="camera_link" />
+    </joint>
+    <joint name="upper_level_to_thermal_camera" type="fixed">
+        <origin xyz="0.02750754 -0.057249999999999995 0.056499999999999995" rpy="1.5707963267948966 -0.0 1.6472184286297693e-83" />
+        <parent link="upper_level_link" />
+        <child link="thermal_camera_link" />
+    </joint>
+    <joint name="upper_level_to_imu" type="fixed">
+        <origin xyz="0.0 0.0 0.04035000000000001" rpy="0.0 -0.0 1.6472184286297693e-83" />
+        <parent link="upper_level_link" />
+        <child link="imu_link" />
+    </joint>
+    <joint name="upper_level_to_range_left" type="fixed">
+        <origin xyz="0.085 0.012 -0.014802099999999997" rpy="0.0 -0.0 1.6472184286297693e-83" />
+        <parent link="upper_level_link" />
+        <child link="range_left_link" />
+    </joint>
+    <joint name="base_link_to_range_front" type="fixed">
+        <origin xyz="0.013000710003725298 -0.14062201013038517 -0.005000000000000151" rpy="-2.563333722837743e-49 3.252606517456514e-19 -7.888609052210118e-31" />
+        <parent link="base_link" />
+        <child link="range_front_link" />
+    </joint>
+    <joint name="base_link_to_range_rear" type="fixed">
+        <origin xyz="-0.012835639996274717 0.12549999986961485 -0.008000000000000158" rpy="3.141592653589793 3.252606517456514e-19 -7.888609052210118e-31" />
+        <parent link="base_link" />
+        <child link="range_rear_link" />
+    </joint>
+    <joint name="base_link_to_motor_rr" type="fixed">
+        <origin xyz="-0.04999999999627474 0.06499999986961484 -0.01900000000000016" rpy="3.141592653589793 -1.5707963267948966 0" />
+        <parent link="base_link" />
+        <child link="motor_rr_link" />
+    </joint>
+    <joint name="motor_rr_to_wheel_rr" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -0.0 1.7105694144590052e-48" />
+        <parent link="motor_rr_link" />
+        <child link="wheel_rr_link" />
+        <axis xyz="-0.0 -3.942138089887358e-34 1.0" />
+    </joint>
+    <joint name="base_link_to_motor_fr" type="fixed">
+        <origin xyz="-0.04999999999627474 -0.08000000013038516 -0.01900000000000016" rpy="-7.888609052210122e-31 -1.5707963267948966 0" />
+        <parent link="base_link" />
+        <child link="motor_fr_link" />
+    </joint>
+    <joint name="base_link_to_motor_fl" type="fixed">
+        <origin xyz="0.05033753000372532 -0.08010768013038516 -0.01900000000000016" rpy="3.141592653589793 -1.5707963267948966 0" />
+        <parent link="base_link" />
+        <child link="motor_fl_link" />
+    </joint>
+    <joint name="base_link_to_motor_rl" type="fixed">
+        <origin xyz="0.05035465000372532 0.06471500986961484 -0.01900000000000016" rpy="3.141592653589793 -1.5707963267948966 0" />
+        <parent link="base_link" />
+        <child link="motor_rl_link" />
+    </joint>
+    <joint name="motor_rl_to_wheel_rl" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -4.930380657631324e-32 3.4211388289180104e-49" />
+        <parent link="motor_rl_link" />
+        <child link="wheel_rl_link" />
+        <axis xyz="4.930380657631324e-32 3.857676143488164e-45 -1.0" />
+    </joint>
+    <joint name="motor_fr_to_wheel_fr" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -0.0 -3.4211388289180104e-49" />
+        <parent link="motor_fr_link" />
+        <child link="wheel_fr_link" />
+        <axis xyz="0.0 -2.9999493436745292e-33 1.0" />
+    </joint>
+    <joint name="motor_fl_to_wheel_fl" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="-7.915210959567012e-31 -3.0814879110195774e-33 3.4211388289180104e-49" />
+        <parent link="motor_fl_link" />
+        <child link="wheel_fl_link" />
+        <axis xyz="-3.0814879110195774e-33 7.915210959567012e-31 -1.0" />
+    </joint>
+    <joint name="upper_level_to_range_right" type="fixed">
+        <origin xyz="-0.08622216999999999 -0.01349606 -0.018" rpy="0.0 -0.0 1.6472184286297693e-83" />
+        <parent link="upper_level_link" />
+        <child link="range_right_link" />
+    </joint>
+
+    <link name="base_footprint"/>
+    <joint name="base_footprint_to_base_link" type="fixed">
+        <parent link="base_footprint"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 0.025" rpy="0 0 0"/>
+    </joint>
+</robot>

@@ -1,0 +1,483 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="Gergor">
+    <link name="Upper-Level">
+        <inertial>
+            <origin xyz="0.0023967975342630166 -0.0013615270577073536 0.03779211299373483" rpy="0.0 -0.0 0.0" />
+            <mass value="0.13651212208139799" />
+            <inertia ixx="0.00034273020952990327" iyy="0.00018049648319140533" izz="0.0002991734068482311" ixy="-7.909173062566514e-07" iyz="2.1069572796448447e-05" ixz="-3.2060969076702762e-06" />
+        </inertial>
+        <visual name="Upper-Level_visual">
+            <origin xyz="-0.007999995541780956 -3.3478477799026018e-09 -0.007999999999999856" rpy="-6.162975822038809e-33 -3.2526065174564526e-19 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Upper-Level.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Upper-Level_collision">
+            <origin xyz="-0.007999995541780956 -3.3478477799026018e-09 -0.007999999999999856" rpy="-6.162975822038809e-33 -3.2526065174564526e-19 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Upper-Level.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Battery">
+        <inertial>
+            <origin xyz="4.458219052816403e-09 3.6607721659760727e-09 0.017923845987170874" rpy="0.0 -0.0 0.0" />
+            <mass value="0.09697089693767996" />
+            <inertia ixx="4.9091534415734804e-05" iyy="2.0465585706148486e-05" izz="4.87765952152123e-05" ixy="-1.1947796767715932e-20" iyz="1.6675961149069038e-20" ixz="-1.4399560103323106e-20" />
+        </inertial>
+        <visual name="Battery_visual">
+            <origin xyz="-0.008749995672166113 0.000250003664497449 -1.4210854715202004e-16" rpy="3.141592653589793 3.2526065174564526e-19 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Battery.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Battery_collision">
+            <origin xyz="-0.008749995672166113 0.000250003664497449 -1.4210854715202004e-16" rpy="3.141592653589793 3.2526065174564526e-19 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Battery.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="RGB-Camera">
+        <inertial>
+            <origin xyz="0.003779157752404263 -0.016000000000072616 -0.016000001679936388" rpy="0.0 -0.0 0.0" />
+            <mass value="0.00705801985514185" />
+            <inertia ixx="7.385686762800353e-07" iyy="4.60968707459797e-07" izz="4.6096870508484876e-07" ixy="-1.4230153513872246e-18" iyz="6.606856987532803e-20" ixz="-1.6264234005547634e-20" />
+        </inertial>
+        <visual name="RGB-Camera_visual">
+            <origin xyz="0.0025000044582170577 -0.0020000000000000816 -0.050000001679936304" rpy="1.5707963267948923 -2.1508939288885974e-15 1.5707963267948928" />
+            <geometry>
+                <mesh filename="meshes/RGB-Camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="RGB-Camera_collision">
+            <origin xyz="0.0025000044582170577 -0.0020000000000000816 -0.050000001679936304" rpy="1.5707963267948923 -2.1508939288885974e-15 1.5707963267948928" />
+            <geometry>
+                <mesh filename="meshes/RGB-Camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Avstands-sensor-fremme">
+        <inertial>
+            <origin xyz="-0.010750000953176712 -0.012750001333232112 -0.0054999999999998566" rpy="0.0 -0.0 0.0" />
+            <mass value="0.011156887500000002" />
+            <inertia ixx="7.170624570312563e-07" iyy="5.422712195312588e-07" izz="1.0343364453123285e-06" ixy="-9.776240864611096e-21" iyz="-2.657834705709447e-22" ixz="-1.3552527156068805e-20" />
+        </inertial>
+        <visual name="Avstands-sensor-fremme_visual">
+            <origin xyz="-0.14062201013038514 -0.01290000161486407 0.005000000000000142" rpy="-3.081487911019543e-32 -3.2526065174564526e-19 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-fremme.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-fremme_collision">
+            <origin xyz="-0.14062201013038514 -0.01290000161486407 0.005000000000000142" rpy="-3.081487911019543e-32 -3.2526065174564526e-19 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-fremme.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Chassie">
+        <inertial>
+            <origin xyz="0.0005701965615616624 -0.0010046150242972978 0.0033131328971587404" rpy="0.0 0.0 0.0" />
+            <mass value="0.29216485565837275" />
+            <inertia ixx="0.0012934383167361682" iyy="0.00025872022660026225" izz="0.0015188001302277813" ixy="-8.673015164490113e-06" iyz="-1.7133567740383528e-05" ixz="-1.958806141146994e-06" />
+        </inertial>
+        <visual name="Chassie_visual">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+            <geometry>
+                <mesh filename="meshes/Chassie.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Chassie_collision">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+            <geometry>
+                <mesh filename="meshes/Chassie.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Avstands-sensor-bak">
+        <inertial>
+            <origin xyz="0.010749999869614797 -0.012750001724095177 0.0054999999999998566" rpy="0.0 -0.0 0.0" />
+            <mass value="0.011156887500000002" />
+            <inertia ixx="7.170624570312563e-07" iyy="5.422712195311504e-07" izz="1.0343364453122472e-06" ixy="6.03510974918689e-21" iyz="2.9116757561866574e-22" ixz="-1.3552527156068805e-20" />
+        </inertial>
+        <visual name="Avstands-sensor-bak_visual">
+            <origin xyz="0.12549999986961485 -0.012730001117552727 -0.00800000000000014" rpy="3.141592653589793 3.2526065174564526e-19 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-bak.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-bak_collision">
+            <origin xyz="0.12549999986961485 -0.012730001117552727 -0.00800000000000014" rpy="3.141592653589793 3.2526065174564526e-19 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-bak.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Thermal-camera">
+        <inertial>
+            <origin xyz="0.0017759347881090104 -0.012620736087732034 0.01036523496622269" rpy="0.0 -0.0 0.0" />
+            <mass value="0.0030870822826619742" />
+            <inertia ixx="3.056714957070319e-07" iyy="1.3505520334223435e-07" izz="1.8939559948378886e-07" ixy="-1.2836761587891639e-08" iyz="1.6358478454356844e-10" ixz="8.936618533925193e-11" />
+        </inertial>
+        <visual name="Thermal-camera_visual">
+            <origin xyz="0.002000004458219289 -0.026350599999999887 0.020715597320063724" rpy="-1.7317962059930018e-30 1.570796326794869 0" />
+            <geometry>
+                <mesh filename="meshes/Thermal-camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Thermal-camera_collision">
+            <origin xyz="0.002000004458219289 -0.026350599999999887 0.020715597320063724" rpy="-1.7317962059930018e-30 1.570796326794869 0" />
+            <geometry>
+                <mesh filename="meshes/Thermal-camera.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Avstands-sensor-venstre">
+        <inertial>
+            <origin xyz="0.012750004398614394 -0.010750002155754865 -0.005499997674649775" rpy="0.0 -0.0 0.0" />
+            <mass value="0.0111568875" />
+            <inertia ixx="5.422712195312317e-07" iyy="7.170624570312529e-07" izz="1.0343364453125047e-06" ixy="6.03510974918689e-21" iyz="6.776263578034403e-21" ixz="-1.5881867761018131e-22" />
+        </inertial>
+        <visual name="Avstands-sensor-venstre_visual">
+            <origin xyz="-0.013462007506596969 0.019104986155097984 -0.00019999767464978113" rpy="1.1069704181076985e-16 -1.4729512214673596e-30 -3.141592653589793" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-venstre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-venstre_collision">
+            <origin xyz="-0.013462007506596969 0.019104986155097984 -0.00019999767464978113" rpy="1.1069704181076985e-16 -1.4729512214673596e-30 -3.141592653589793" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-venstre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Motor-FR">
+        <inertial>
+            <origin xyz="1.7319479184152443e-16 0.02494272447716412 -9.573994930178742e-10" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.671247540468407e-05" iyy="1.2042060245804308e-05" izz="2.671247540464303e-05" ixy="-3.260044468377434e-70" iyz="9.215718466126788e-19" ixz="-1.6263032587282567e-19" />
+        </inertial>
+        <visual name="Motor-FR_visual">
+            <origin xyz="-0.02006216406509751 0.001982999281018989 -9.40006126270987e-10" rpy="1.5707963267948966 -5.551115123125783e-17 1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/Motor-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-FR_collision">
+            <origin xyz="-0.02006216406509751 0.001982999281018989 -9.40006126270987e-10" rpy="1.5707963267948966 -5.551115123125783e-17 1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/Motor-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="LD06_LiDAR">
+        <inertial>
+            <origin xyz="3.6113848578267493e-09 4.421719479175135e-09 0.015204879071300024" rpy="0.0 -0.0 0.0" />
+            <mass value="0.07569091272999597" />
+            <inertia ixx="1.4437097944852706e-05" iyy="1.4437097944559104e-05" izz="1.572243612429717e-05" ixy="-1.5707038664559495e-07" iyz="-1.9905274260476058e-20" ixz="-1.8346733637528145e-18" />
+        </inertial>
+        <visual name="LD06_LiDAR_visual">
+            <origin xyz="3.6113874767040867e-09 4.421719480025149e-09 1.3756625882876962e-09" rpy="1.5707963267948966 -5.686640394686482e-16 -1.5707963267948997" />
+            <geometry>
+                <mesh filename="meshes/LD06_LiDAR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="LD06_LiDAR_collision">
+            <origin xyz="3.6113874767040867e-09 4.421719480025149e-09 1.3756625882876962e-09" rpy="1.5707963267948966 -5.686640394686482e-16 -1.5707963267948997" />
+            <geometry>
+                <mesh filename="meshes/LD06_LiDAR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="IMU">
+        <inertial>
+            <origin xyz="4.45821904060395e-09 -3.3031442930875345e-09 0.000500000000000096" rpy="0.0 -0.0 0.0" />
+            <mass value="0.0003552000152170653" />
+            <inertia ixx="4.292000310904181e-09" iyy="7.607200749331516e-09" izz="1.18400010576963e-08" ixy="-3.352020185400433e-23" iyz="-1.1166938269465874e-23" ixz="-5.955700410381799e-23" />
+        </inertial>
+        <visual name="IMU_visual">
+            <origin xyz="-0.007999995541780977 -3.3031445562797803e-09 -0.04834999999999985" rpy="-6.162975822038809e-33 -3.2526065174564526e-19 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/IMU.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="IMU_collision">
+            <origin xyz="-0.007999995541780977 -3.3031445562797803e-09 -0.04834999999999985" rpy="-6.162975822038809e-33 -3.2526065174564526e-19 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/IMU.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Mecanum-wheel-FL">
+        <inertial>
+            <origin xyz="-0.000322364933043513 -0.026544464448392563 0.00017061718757419798" rpy="0.0 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.283177074565066e-05" iyy="9.244372507348454e-05" izz="7.282825505949353e-05" ixy="-1.46474408098873e-07" iyz="3.1677657785409395e-07" ixz="-3.2229503521292308e-09" />
+        </inertial>
+        <visual name="Mecanum-wheel-FL_visual">
+            <origin xyz="-0.03738974153915106 -0.10002300971390483 -0.03522473364481626" rpy="-1.570796326794895 0.7853981633974408 -1.570796326794897" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-FL_collision">
+            <origin xyz="-0.03738974153915106 -0.10002300971390483 -0.03522473364481626" rpy="-1.570796326794895 0.7853981633974408 -1.570796326794897" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="LiDAR-Mount">
+        <inertial>
+            <origin xyz="-0.0010789646894884797 -3.2563265073845916e-05 -2.067058956080295e-05" rpy="9.767397155917488e-50 -0.0 -4.861730685829017e-63" />
+            <mass value="0.025423989422360332" />
+            <inertia ixx="6.28088747813872e-06" iyy="3.4596049352209804e-06" izz="3.699081704242892e-06" ixy="8.933844679081966e-10" iyz="1.7117748145840534e-11" ixz="-1.1055542338084398e-11" />
+        </inertial>
+        <visual name="LiDAR-Mount_visual">
+            <origin xyz="0.006150001375662591 4.421719471264796e-09 -2.1073611387485008e-05" rpy="-1.5707963267948966 -1.5959455978986625e-15 -1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/LiDAR-Mount.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="LiDAR-Mount_collision">
+            <origin xyz="0.006150001375662591 4.421719471264796e-09 -2.1073611387485008e-05" rpy="-1.5707963267948966 -1.5959455978986625e-15 -1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/LiDAR-Mount.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Mecanum-wheel-RL">
+        <inertial>
+            <origin xyz="-0.0003223649330433842 0.026544460526042205 -0.0001706147432024441" rpy="0.0 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.283177074564242e-05" iyy="9.244372507349061e-05" izz="7.282825505949332e-05" ixy="1.4647440810386034e-07" iyz="3.1677657785680446e-07" ixz="3.2229503574960315e-09" />
+        </inertial>
+        <visual name="Mecanum-wheel-RL_visual">
+            <origin xyz="-0.03738974153915007 0.10002300579155403 0.03522473608918917" rpy="1.5707963267948983 -0.7853981633974556 1.5707963267948857" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-RL_collision">
+            <origin xyz="-0.03738974153915007 0.10002300579155403 0.03522473608918917" rpy="1.5707963267948983 -0.7853981633974556 1.5707963267948857" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Mecanum-wheel-RR">
+        <inertial>
+            <origin xyz="-0.00032236493304357074 -0.026544461164959225 0.00017061624033781086" rpy="0.0 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.28317707456435e-05" iyy="9.244372507348627e-05" izz="7.282825505950026e-05" ixy="-1.464744080993067e-07" iyz="3.1677657785626236e-07" ixz="-3.2229503554360474e-09" />
+        </inertial>
+        <visual name="Mecanum-wheel-RR_visual">
+            <origin xyz="-0.03738974153915103 -0.1000230064304689 -0.03522473459205803" rpy="-1.5707963267948966 0.7853981633975144 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-RR_collision">
+            <origin xyz="-0.03738974153915103 -0.1000230064304689 -0.03522473459205803" rpy="-1.5707963267948966 0.7853981633975144 -1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Mecanum-wheel-FR">
+        <inertial>
+            <origin xyz="-0.00032236493304340643 0.026544461164959312 -0.00017061407967208453" rpy="0.0 -0.0 0.0" />
+            <mass value="0.1511892944710378" />
+            <inertia ixx="7.283177074562247e-05" iyy="9.244372507348974e-05" izz="7.282825505949332e-05" ixy="1.4647440809534935e-07" iyz="3.1677657785366027e-07" ixz="3.222950352671332e-09" />
+        </inertial>
+        <visual name="Mecanum-wheel-FR_visual">
+            <origin xyz="-0.03738974153915089 0.10002300643047335 0.03522473675271636" rpy="1.5707963267948986 -0.7853981633974091 1.570796326794898" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Mecanum-wheel-FR_collision">
+            <origin xyz="-0.03738974153915089 0.10002300643047335 0.03522473675271636" rpy="1.5707963267948986 -0.7853981633974091 1.570796326794898" />
+            <geometry>
+                <mesh filename="meshes/Mecanum-wheel-FR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Avstands-sensor-høyre">
+        <inertial>
+            <origin xyz="-0.012750003968667767 0.01075000376223434 -0.005499999999999901" rpy="0.0 -0.0 0.0" />
+            <mass value="0.0111568875" />
+            <inertia ixx="5.422712195312453e-07" iyy="7.170624570312495e-07" izz="1.0343364453124912e-06" ixy="-3.705769144237564e-22" iyz="1.5387579684724216e-72" ixz="-7.676236084492097e-22" />
+        </inertial>
+        <visual name="Avstands-sensor-høyre_visual">
+            <origin xyz="0.013462007936543627 -0.019104984548618534 -0.00019999999999990693" rpy="3.252606517435962e-19 4.8572257327350556e-17 1.2490009027033014e-16" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-høyre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Avstands-sensor-høyre_collision">
+            <origin xyz="0.013462007936543627 -0.019104984548618534 -0.00019999999999990693" rpy="3.252606517435962e-19 4.8572257327350556e-17 1.2490009027033014e-16" />
+            <geometry>
+                <mesh filename="meshes/Avstands-sensor-høyre.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Motor-RL">
+        <inertial>
+            <origin xyz="-8.881784197001253e-18 0.02494272511608105 -2.938676235686444e-10" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.6712475404684285e-05" iyy="1.2042060245804091e-05" izz="2.6712475404642815e-05" ixy="0.0" iyz="9.75781955236954e-19" ixz="0.0" />
+        </inertial>
+        <visual name="Motor-RL_visual">
+            <origin xyz="-0.020062164065097678 0.001982999919935944 -2.7647439893030423e-10" rpy="1.5707963267948966 -6.591949208711876e-15 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Motor-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-RL_collision">
+            <origin xyz="-0.020062164065097678 0.001982999919935944 -2.7647439893030423e-10" rpy="1.5707963267948966 -6.591949208711876e-15 1.5707963267948968" />
+            <geometry>
+                <mesh filename="meshes/Motor-RL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Motor-RR">
+        <inertial>
+            <origin xyz="1.2878587085651815e-16 -0.024942724477164085 -1.203269146543562e-09" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.6712475404684394e-05" iyy="1.2042060245804525e-05" izz="2.6712475404643194e-05" ixy="-1.0866814894591445e-70" iyz="9.215718466126788e-19" ixz="-5.421010862427522e-20" />
+        </inertial>
+        <visual name="Motor-RR_visual">
+            <origin xyz="-0.020062164065097577 -0.0019829992810189534 -1.220662504408665e-09" rpy="-1.5707963267948966 5.551115123125783e-17 -1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/Motor-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-RR_collision">
+            <origin xyz="-0.020062164065097577 -0.0019829992810189534 -1.220662504408665e-09" rpy="-1.5707963267948966 5.551115123125783e-17 -1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/Motor-RR.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="Motor-FL">
+        <inertial>
+            <origin xyz="1.1990408665951691e-16 0.02494272119373083 2.1505034375479682e-09" rpy="0.0 -0.0 0.0" />
+            <mass value="0.15441088816550527" />
+            <inertia ixx="2.671247540468396e-05" iyy="1.2042060245804308e-05" izz="2.6712475404642815e-05" ixy="-2.710505431213761e-20" iyz="1.0842021724855044e-18" ixz="5.421010862427522e-20" />
+        </inertial>
+        <visual name="Motor-FL_visual">
+            <origin xyz="-0.020062164065097535 0.0019829959975857037 2.1678969464034028e-09" rpy="1.5707963267948966 6.56419363309624e-15 1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/Motor-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="Motor-FL_collision">
+            <origin xyz="-0.020062164065097535 0.0019829959975857037 2.1678969464034028e-09" rpy="1.5707963267948966 6.56419363309624e-15 1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/Motor-FL.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="Chassie_Rigid-1" type="fixed">
+        <origin xyz="0.00015423000372526423 -0.007561000130385147 -1.4210854715202004e-16" rpy="3.141592653589793 6.1584619237316516e-33 -1.5707963267948966" />
+        <parent link="Chassie" />
+        <child link="Battery" />
+    </joint>
+    <joint name="Chassie_Rigid-2" type="fixed">
+        <origin xyz="0.00015423000372526423 -0.007561000130385147 0.007999999999999856" rpy="-3.2526065174564526e-19 6.1584619237316516e-33 -1.5707963267948966" />
+        <parent link="Chassie" />
+        <child link="Upper-Level" />
+    </joint>
+    <joint name="Upper-Level_Revolute-3" type="continuous">
+        <origin xyz="4.479000000000011e-05 -3.5119999999999996e-05 0.08375145" rpy="-1.6930901125533616e-15 -1.5707963267948966 0" />
+        <parent link="Upper-Level" />
+        <child link="LiDAR-Mount" />
+        <axis xyz="9.398538128609942e-32 -0.9999999999999996 -1.6930901125533608e-15" />
+    </joint>
+    <joint name="LiDAR-Mount_Rigid-4" type="fixed">
+        <origin xyz="0.006150000000000003 3.469446951953614e-20 -2.1069999999999702e-05" rpy="1.102916357619544e-47 1.570796326794895 0" />
+        <parent link="LiDAR-Mount" />
+        <child link="LD06_LiDAR" />
+    </joint>
+    <joint name="Upper-Level_Rigid-5" type="fixed">
+        <origin xyz="0.057249999999999995 -0.03049246 0.056499999999999995" rpy="1.570796326794901 -0.0 0.0" />
+        <parent link="Upper-Level" />
+        <child link="RGB-Camera" />
+    </joint>
+    <joint name="Upper-Level_Rigid-6" type="fixed">
+        <origin xyz="0.057249999999999995 0.02750754 0.056499999999999995" rpy="1.5707963267948966 -0.0 0.0" />
+        <parent link="Upper-Level" />
+        <child link="Thermal-camera" />
+    </joint>
+    <joint name="Upper-Level_Rigid-7" type="fixed">
+        <origin xyz="0.0 0.0 0.04035000000000001" rpy="0.0 -0.0 0.0" />
+        <parent link="Upper-Level" />
+        <child link="IMU" />
+    </joint>
+    <joint name="Upper-Level_Rigid-8" type="fixed">
+        <origin xyz="-0.012 0.085 -0.014802099999999997" rpy="0.0 -0.0 0.0" />
+        <parent link="Upper-Level" />
+        <child link="Avstands-sensor-venstre" />
+    </joint>
+    <joint name="Chassie_Rigid-9" type="fixed">
+        <origin xyz="0.013000710003725262 -0.14062201013038508 -0.005000000000000142" rpy="-3.2526065174564526e-19 6.1584619237316516e-33 -1.5707963267948966" />
+        <parent link="Chassie" />
+        <child link="Avstands-sensor-fremme" />
+    </joint>
+    <joint name="Chassie_Rigid-11" type="fixed">
+        <origin xyz="-0.012835639996274736 0.12549999986961483 -0.00800000000000015" rpy="3.141592653589793 6.1584619237316516e-33 -1.5707963267948966" />
+        <parent link="Chassie" />
+        <child link="Avstands-sensor-bak" />
+    </joint>
+    <joint name="Chassie_Rigid-21" type="fixed">
+        <origin xyz="-0.04999999999627474 0.06499999986961483 -0.019000000000000152" rpy="1.5707963267948966 -1.5707963267948966 0" />
+        <parent link="Chassie" />
+        <child link="Motor-RR" />
+    </joint>
+    <joint name="Motor-RR_Revolute-22" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="Motor-RR" />
+        <child link="Mecanum-wheel-RR" />
+        <axis xyz="0.0 -1.0 -4.022647846648095e-51" />
+    </joint>
+    <joint name="Chassie_Rigid-23" type="fixed">
+        <origin xyz="-0.04999999999627474 -0.08000000013038511 -0.019000000000000152" rpy="-1.5707963267948968 -1.5707963267948966 0" />
+        <parent link="Chassie" />
+        <child link="Motor-FR" />
+    </joint>
+    <joint name="Chassie_Rigid-24" type="fixed">
+        <origin xyz="0.05033753000372526 -0.08010768013038512 -0.019000000000000152" rpy="1.5707963267948966 -1.5707963267948966 0" />
+        <parent link="Chassie" />
+        <child link="Motor-FL" />
+    </joint>
+    <joint name="Chassie_Rigid-25" type="fixed">
+        <origin xyz="0.050354650003725264 0.06471500986961483 -0.019000000000000152" rpy="1.5707963267948966 -1.5707963267948966 0" />
+        <parent link="Chassie" />
+        <child link="Motor-RL" />
+    </joint>
+    <joint name="Motor-RL_Revolute-26" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 7.022514532037904e-97 3.503246160812043e-46" />
+        <parent link="Motor-RL" />
+        <child link="Mecanum-wheel-RL" />
+        <axis xyz="-3.503246160812043e-46 1.0 2.495984093634733e-46" />
+    </joint>
+    <joint name="Motor-FR_Revolute-27" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="Motor-FR" />
+        <child link="Mecanum-wheel-FR" />
+        <axis xyz="0.0 -1.0 2.1209945128196103e-51" />
+    </joint>
+    <joint name="Motor-FL_Revolute-28" type="continuous">
+        <origin xyz="0.0 0.0 0.0" rpy="-2.660190735689466e-33 -0.0 0.0" />
+        <parent link="Motor-FL" />
+        <child link="Mecanum-wheel-FL" />
+        <axis xyz="0.0 1.0 2.4034014453635364e-47" />
+    </joint>
+    <joint name="Upper-Level_Rigid-29" type="fixed">
+        <origin xyz="0.01349606 -0.08622216999999999 -0.018" rpy="0.0 -0.0 0.0" />
+        <parent link="Upper-Level" />
+        <child link="Avstands-sensor-høyre" />
+    </joint>
+</robot>
