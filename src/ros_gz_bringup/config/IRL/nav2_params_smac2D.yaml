@@ -298,22 +298,22 @@ collision_monitor:
     front_ir:
       type: "range"
       topic: "/ir/front"
-      enabled: False  # Front IR is very noisy, disable for now
+      enabled: True  # Front IR is very noisy, disable for now
       obstacle_angle: 0.2
     rear_ir:
       type: "range"
       topic: "/ir/rear"
-      enabled: False  # Rear IR is very noisy, disable for now
+      enabled: True  # Rear IR is very noisy, disable for now
       obstacle_angle: 0.2
     left_ir:
       type: "range"
       topic: "/ir/left"
-      enabled: False  # Left IR is very noisy, disable for now
+      enabled: True  # Left IR is very noisy, disable for now
       obstacle_angle: 0.2
     right_ir:
       type: "range"
       topic: "/ir/right"
-      enabled: False  # Right IR is very noisy, disable for now
+      enabled: True  # Right IR is very noisy, disable for now
       obstacle_angle: 0.2
     polygons: ["slowdown_polygon"]
     slowdown_polygon:
