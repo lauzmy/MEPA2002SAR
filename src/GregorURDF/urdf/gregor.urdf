@@ -412,7 +412,7 @@
         <child link="thermal_camera_link" />
     </joint>
     <joint name="Upper-Level_Rigid-7" type="fixed">
-        <origin xyz="0.0 0.0 0.04035000000000001" rpy="0.0 -0.0 0.0" />
+        <origin xyz="0.0 0.0 0.04035000000000001" rpy="0.0 -0.0 -1.5708" />
         <parent link="upper_level_link" />
         <child link="imu_link" />
     </joint>
