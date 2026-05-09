@@ -2,82 +2,77 @@
 
 import rclpy
 from rclpy.node import Node
-import RPi.GPIO as GPIO
+import gpiod
 from sensor_msgs.msg import Range
 
 
 class CollisionAvoidance(Node):
-    """Read 4 digital IR sensors directly from GPIO and publish Range messages."""
-
     def __init__(self):
         super().__init__('collision_avoidance')
 
-        # active_low=True means LOW voltage indicates obstacle.
-        self.declare_parameter('active_low', True)
-        self.active_low = bool(self.get_parameter('active_low').value)
-        
+        self.chip = gpiod.Chip('gpiochip4')  # Raspberry Pi 5
 
-        # Sensor order: [front, right, left, rear]
-        self.sensor_names = ['front', 'right', 'left', 'rear']
-        self.sensor_pins = [27, 17, 22, 23]
-        self.pub_front = self.create_publisher(Range, 'ir/front', 10)
-        self.pub_right = self.create_publisher(Range, 'ir/right', 10)
-        self.pub_left = self.create_publisher(Range, 'ir/left', 10)
-        self.pub_rear = self.create_publisher(Range, 'ir/rear', 10)
-    
+        # Cytron IR05 GPIO pins
+        self.sensors = {
+            'front': 9,
+            'right': 10,
+            'left': 11,
+            'rear': 17,
+        }
 
-        # Range uses meters, so publish a small distance when blocked and max range when clear.
+        # Publishers
+        self.publishers = {
+            'front': self.create_publisher(Range, '/ir/front', 10),
+            'right': self.create_publisher(Range, '/ir/right', 10),
+            'left': self.create_publisher(Range, '/ir/left', 10),
+            'rear': self.create_publisher(Range, '/ir/rear', 10),
+        }
+
+        # Request GPIO lines once
+        self.lines = {}
+
+        for name, pin in self.sensors.items():
+            line = self.chip.get_line(pin)
+            line.request(
+                consumer=f'ir_{name}',
+                type=gpiod.LINE_REQ_DIR_IN
+            )
+            self.lines[name] = line
+
         self.obstacle_range = 0.05
-        self.range_max = 2.0
         self.range_min = 0.02
-       
+        self.range_max = 0.10
 
-        GPIO.setmode(GPIO.BCM)
-        for pin in self.sensor_pins:
-            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-        self.timer = self.create_timer(0.1, self.read_sensors)
+        self.timer = self.create_timer(0.1, self.read_sensors)  # 10 Hz
 
     def read_sensors(self):
-        for name, pin in zip(self.sensor_names, self.sensor_pins):
-            """
-            if GPIO.input(pin) == GPIO.LOW:
-                obstacle_detected = self.obstacle_range
-            elif GPIO.input(pin) == GPIO.HIGH:
-                no_obstacle = self.range_max
-            """
-            raw_level = GPIO.input(pin)
-            obstacle_detected = (raw_level == GPIO.LOW) if self.active_low else (raw_level == GPIO.HIGH)
-            
+        for name, line in self.lines.items():
+            gpio_value = line.get_value()
+
+            obstacle_detected = (gpio_value == 0)
+
             msg = Range()
             msg.header.stamp = self.get_clock().now().to_msg()
-            msg.header.frame_id = name
+            msg.header.frame_id = f'ir_{name}_link'
+
             msg.radiation_type = Range.INFRARED
             msg.field_of_view = 0.2
             msg.min_range = self.range_min
             msg.max_range = self.range_max
 
-            
             if obstacle_detected:
                 msg.range = self.obstacle_range
-                self.get_logger().info('Obstacle detected by %s sensor!' % name)
-              
+                self.get_logger().info(f'Obstacle detected by {name} sensor')
             else:
                 msg.range = self.range_max
-                self.get_logger().info('No obstacle detected by %s sensor.' % name)
-        
-            if name == 'front':
-                self.pub_front.publish(msg)
-            elif name == 'right':
-                self.pub_right.publish(msg)
-            elif name == 'left':
-                self.pub_left.publish(msg)
-            elif name == 'rear':
-                self.pub_rear.publish(msg)
-            
+
+            self.publishers[name].publish(msg)
 
     def destroy_node(self):
-        GPIO.cleanup()
+        for line in self.lines.values():
+            line.release()
+
+        self.chip.close()
         super().destroy_node()
 
 
