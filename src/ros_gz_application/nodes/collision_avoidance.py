@@ -47,6 +47,7 @@ class CollisionAvoidance(Node):
             msg.max_range = self.range_max
             msg.range = self.obstacle_range if obstacle_detected else self.clear_range
             self.publishers[index].publish(msg)
+            self.get_logger().info('Published IR sensor readings:', msg)
 
     def destroy_node(self):
         GPIO.cleanup()
