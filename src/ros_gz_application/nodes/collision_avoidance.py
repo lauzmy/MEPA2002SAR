@@ -15,12 +15,11 @@ class CollisionAvoidance(Node):
         # Sensor order: [front, right, left, rear]
         self.sensor_names = ['front', 'right', 'left', 'rear']
         self.sensor_pins = [27, 17, 22, 23]
-        self.publishers = [
-            self.create_publisher(Range, 'ir/front', 10),
-            self.create_publisher(Range, 'ir/right', 10),
-            self.create_publisher(Range, 'ir/left', 10),
-            self.create_publisher(Range, 'ir/rear', 10),
-        ]
+        self.pub_front = self.create_publisher(Range, 'ir/front', 10)
+        self.pub_right = self.create_publisher(Range, 'ir/right', 10)
+        self.pub_left = self.create_publisher(Range, 'ir/left', 10)
+        self.pub_rear = self.create_publisher(Range, 'ir/rear', 10)
+    
 
         # Range uses meters, so publish a small distance when blocked and max range when clear.
         self.obstacle_range = 0.05
@@ -36,8 +35,9 @@ class CollisionAvoidance(Node):
         self.get_logger().info('CollisionAvoidance started using GPIO only')
 
     def read_sensors(self):
-        for index, (name, pin) in enumerate(zip(self.sensor_names, self.sensor_pins)):
+        for (name, pin) in enumerate(zip(self.sensor_names, self.sensor_pins)):
             obstacle_detected = GPIO.input(pin) == GPIO.LOW
+
             msg = Range()
             msg.header.stamp = self.get_clock().now().to_msg()
             msg.header.frame_id = name
@@ -46,7 +46,15 @@ class CollisionAvoidance(Node):
             msg.min_range = self.range_min
             msg.max_range = self.range_max
             msg.range = self.obstacle_range if obstacle_detected else self.clear_range
-            self.publishers[index].publish(msg)
+            if name == 'front':
+                self.pub_front.publish(msg)
+            elif name == 'right':
+                self.pub_right.publish(msg)
+            elif name == 'left':
+                self.pub_left.publish(msg)
+            elif name == 'rear':
+                self.pub_rear.publish(msg)
+
             self.get_logger().info('Published IR sensor readings:', msg)
 
     def destroy_node(self):
