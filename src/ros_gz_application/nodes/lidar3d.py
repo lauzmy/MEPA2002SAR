@@ -224,6 +224,7 @@ class Lidar3D(Node):
         self.declare_parameter('joint_state_rate_hz', 50.0)
 
         sim = bool(self.get_parameter('sim').value)
+        self._sim = sim
         self._lo = math.radians(float(self.get_parameter('min_angle_deg').value))
         self._hi = math.radians(float(self.get_parameter('max_angle_deg').value))
         self._sweep_period = float(self.get_parameter('sweep_period_s').value)
@@ -341,28 +342,36 @@ class Lidar3D(Node):
 
     # ── Scan -> tilted PointCloud2 ────────────────────────────────────────
     def _on_scan(self, scan: LaserScan) -> None:
-        # Need at least two angle samples to interpolate.
-        snap = self._angles.snapshot()
-        if snap is None:
-            self._n_scans_drop_no_angle += 1
-            return
-        t_hist, ang_hist = snap
-
         n = len(scan.ranges)
         if n == 0:
             return
+
+        snap = self._angles.snapshot()
+        if snap is None and not self._sim:
+            # Real robot but no UART samples yet — drop the scan.
+            self._n_scans_drop_no_angle += 1
+            return
+        t_hist, ang_hist = snap if snap is not None else (None, None)
 
         # LD06 stamps the frame at the *end* of the revolution. Reconstruct
         # per-beam timestamps backwards from there.
         scan_end_s = scan.header.stamp.sec + scan.header.stamp.nanosec * 1e-9
         dt = scan.time_increment if scan.time_increment > 0.0 else (1.0 / 10.0) / n
         beam_idx = np.arange(n, dtype=np.float64)
-        # Beam 0 is the oldest, beam n-1 is the newest -> dt apart.
         beam_t = scan_end_s - (n - 1 - beam_idx) * dt
         scan_start_s = float(beam_t[0])
 
-        # Per-beam tilt angle by linear interpolation of the UART history.
-        tilt = np.interp(beam_t, t_hist, ang_hist).astype(np.float64)
+        # Per-beam tilt angle by linear interpolation of the UART history,
+        # or the commanded angle if we have no feedback (sim mode).
+        if t_hist is not None:
+            tilt = np.interp(beam_t, t_hist, ang_hist).astype(np.float64)
+        else:
+            # Sim: evaluate the same triangle waveform at each beam's timestamp.
+            tilt = np.fromiter(
+                (_triangle(t - self._t0, self._sweep_period, self._lo, self._hi)
+                 for t in beam_t),
+                dtype=np.float64, count=beam_t.size,
+            )
 
         # Range filtering.
         ranges = np.asarray(scan.ranges, dtype=np.float64)
@@ -382,21 +391,21 @@ class Lidar3D(Node):
         else:
             intensity = np.zeros(ranges.size, dtype=np.float32)
 
-        # Beam in laser frame: x = r cos th, y = r sin th, z = 0.
+        # Beam in laser frame (laser X-forward, Y-left, Z-up at tilt=0).
         x_l = ranges * np.cos(theta)
-        y_l = ranges * np.sin(theta)
+        y_l = -ranges * np.sin(theta)
 
-        # Compose body_link <- laser:
-        #   p_body = (0, 0, hinge_z) + R_tilt * ( (0, 0, sensor_z) + p_laser )
-        # R_tilt is rotation about +Y by `tilt`:
-        #   [ cos t  0  sin t ]
-        #   [   0    1    0   ]
-        #   [-sin t  0  cos t ]
+        # Compose base_link <- laser:
+        #   p_base = (0, 0, hinge_z) + R_x(tilt) * ( (0, 0, sensor_z) + p_laser )
+        # R_x(tilt) =
+        #   [ 1     0        0   ]
+        #   [ 0   cos t   -sin t ]
+        #   [ 0   sin t    cos t ]
         cos_t = np.cos(tilt)
         sin_t = np.sin(tilt)
-        x = (cos_t * x_l + sin_t * self._z_off).astype(np.float32)
-        y = y_l.astype(np.float32)
-        z = (-sin_t * x_l + cos_t * self._z_off + self._hinge_z).astype(np.float32)
+        x = x_l.astype(np.float32)
+        y = (cos_t * y_l - sin_t * self._z_off).astype(np.float32)
+        z = (sin_t * y_l + cos_t * self._z_off + self._hinge_z).astype(np.float32)
 
         # Pack into the PointCloud2 byte buffer.
         pts = np.empty(x.size, dtype=np.dtype({
@@ -434,16 +443,20 @@ class Lidar3D(Node):
     # ── Diagnostics ───────────────────────────────────────────────────────
     def _log_health(self) -> None:
         latest = self._angles.latest()
-        age_ms = -1.0
-        ang_deg = float('nan')
+        cmd_deg = math.degrees(self._cmd_angle_rad)
         if latest is not None:
             age_ms = (self._now_s() - latest[0]) * 1e3
             ang_deg = math.degrees(latest[1])
+            angle_str = f'angle={ang_deg:+.2f} deg ({age_ms:.0f} ms old)'
+        elif self._sim:
+            angle_str = 'angle=<sim, using cmd>'
+        else:
+            angle_str = 'angle=<no UART samples yet>'
+
         self.get_logger().info(
             f'5s window: clouds={self._n_scans_pub}  '
             f'dropped(no UART)={self._n_scans_drop_no_angle}  '
-            f'angle={ang_deg:+.2f} deg ({age_ms:.0f} ms old)  '
-            f'cmd={math.degrees(self._cmd_angle_rad):+.2f} deg')
+            f'{angle_str}  cmd={cmd_deg:+.2f} deg')
         self._n_scans_pub = 0
         self._n_scans_drop_no_angle = 0
 

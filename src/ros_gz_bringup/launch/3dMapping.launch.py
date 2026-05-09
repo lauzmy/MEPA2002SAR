@@ -61,6 +61,11 @@ def generate_launch_description():
     # Simulation mode
     # -----------------------------------------------------------------------
     if use_sim:
+
+        discovery_range = SetEnvironmentVariable('ROS_AUTOMATIC_DISCOVERY_RANGE', 'LOCALHOST')
+        nodes.insert(0, discovery_range)
+
+
         pkg_ros_gz_sim     = get_package_share_directory('ros_gz_sim')
         pkg_example_gazebo = get_package_share_directory('ros_gz_gazebo')
         pkg_ros_gz_desc    = get_package_share_directory('ros_gz_description')
@@ -78,9 +83,6 @@ def generate_launch_description():
         # Gazebo) inherit them at spawn time. SetEnvironmentVariable alone is
         # not reliable for IncludeLaunchDescription subprocesses.
 
-        # Localhost isolation: sim topics stay on this machine only.
-        os.environ['ROS_LOCALHOST_ONLY'] = '1'
-
         # GZ_SIM_RESOURCE_PATH: parent of gregor_description share dir so
         # Gazebo resolves model://gregor_description/meshes/... URIs.
         _gz_path_parts = [
@@ -92,7 +94,6 @@ def generate_launch_description():
         os.environ['GZ_SIM_RESOURCE_PATH'] = os.pathsep.join(_gz_path_parts)
 
         # Mirror as launch actions for introspection.
-        localhost_only   = SetEnvironmentVariable('ROS_LOCALHOST_ONLY',   '1')
         gz_resource_path = SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.environ['GZ_SIM_RESOURCE_PATH'])
 
         gz_sim = IncludeLaunchDescription(
@@ -124,7 +125,7 @@ def generate_launch_description():
             arguments=[
                 '-name', 'gregor',
                 '-topic', 'robot_description',
-                '-x', '2.0', '-y', '0.0', '-z', '0.15',
+                '-x', '2.0', '-y', '0.0', '-z', '1.0',
             ],
             output='screen',
         )
@@ -152,7 +153,7 @@ def generate_launch_description():
             parameters=[{'use_sim_time': True}],
         )
 
-        nodes += [localhost_only, gz_resource_path,
+        nodes += [gz_resource_path,
                   gz_sim, ros_gz_bridge, spawn, lidar3d, rviz]
 
     # -----------------------------------------------------------------------
