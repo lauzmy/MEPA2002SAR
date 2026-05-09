@@ -17,7 +17,7 @@ class CollisionAvoidance(Node):
         self.front_pin = 9
         self.right_pin = 10
         self.left_pin = 11
-        self.rear_pin = 17
+        self.rear_pin = 22
 
         # Create publishers
         self.front_pub = self.create_publisher(Range, '/ir/front', 10)
