@@ -7,70 +7,103 @@ from sensor_msgs.msg import Range
 
 
 class CollisionAvoidance(Node):
+
     def __init__(self):
         super().__init__('collision_avoidance')
 
-        self.chip = gpiod.Chip('gpiochip4')  # Raspberry Pi 5
+        self.chip = gpiod.Chip('gpiochip4')
 
-        # Cytron IR05 GPIO pins
-        self.sensors = {
-            'front': 9,
-            'right': 10,
-            'left': 11,
-            'rear': 17,
-        }
+        # GPIO pins
+        self.front_pin = 9
+        self.right_pin = 10
+        self.left_pin = 11
+        self.rear_pin = 17
 
-        # Publishers
-        self.publishers = {
-            'front': self.create_publisher(Range, '/ir/front', 10),
-            'right': self.create_publisher(Range, '/ir/right', 10),
-            'left': self.create_publisher(Range, '/ir/left', 10),
-            'rear': self.create_publisher(Range, '/ir/rear', 10),
-        }
+        # Create publishers
+        self.front_pub = self.create_publisher(Range, '/ir/front', 10)
+        self.right_pub = self.create_publisher(Range, '/ir/right', 10)
+        self.left_pub = self.create_publisher(Range, '/ir/left', 10)
+        self.rear_pub = self.create_publisher(Range, '/ir/rear', 10)
 
-        # Request GPIO lines once
-        self.lines = {}
+        # Request GPIO lines
+        self.front_line = self.setup_gpio(self.front_pin, 'front')
+        self.right_line = self.setup_gpio(self.right_pin, 'right')
+        self.left_line = self.setup_gpio(self.left_pin, 'left')
+        self.rear_line = self.setup_gpio(self.rear_pin, 'rear')
 
-        for name, pin in self.sensors.items():
-            line = self.chip.get_line(pin)
-            line.request(
-                consumer=f'ir_{name}',
-                type=gpiod.LINE_REQ_DIR_IN
-            )
-            self.lines[name] = line
-
+        # Sensor config
         self.obstacle_range = 0.05
         self.range_min = 0.02
         self.range_max = 0.10
 
-        self.timer = self.create_timer(0.1, self.read_sensors)  # 10 Hz
+        self.timer = self.create_timer(0.1, self.read_sensors)
+
+        self.get_logger().info('IR collision node started')
+
+    def setup_gpio(self, pin, name):
+        line = self.chip.get_line(pin)
+        line.request(
+            consumer=f'ir_{name}',
+            type=gpiod.LINE_REQ_DIR_IN
+        )
+        return line
+
+    def make_range_msg(self, frame_id, obstacle_detected):
+        msg = Range()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = frame_id
+
+        msg.radiation_type = Range.INFRARED
+        msg.field_of_view = 0.2
+        msg.min_range = self.range_min
+        msg.max_range = self.range_max
+
+        if obstacle_detected:
+            msg.range = self.obstacle_range
+        else:
+            msg.range = self.range_max
+
+        return msg
 
     def read_sensors(self):
-        for name, line in self.lines.items():
-            gpio_value = line.get_value()
 
-            obstacle_detected = (gpio_value == 0)
+        # Front
+        front_detected = (self.front_line.get_value() == 0)
+        front_msg = self.make_range_msg('ir_front_link', front_detected)
+        self.front_pub.publish(front_msg)
 
-            msg = Range()
-            msg.header.stamp = self.get_clock().now().to_msg()
-            msg.header.frame_id = f'ir_{name}_link'
+        if front_detected:
+            self.get_logger().info('Obstacle detected FRONT')
 
-            msg.radiation_type = Range.INFRARED
-            msg.field_of_view = 0.2
-            msg.min_range = self.range_min
-            msg.max_range = self.range_max
+        # Right
+        right_detected = (self.right_line.get_value() == 0)
+        right_msg = self.make_range_msg('ir_right_link', right_detected)
+        self.right_pub.publish(right_msg)
 
-            if obstacle_detected:
-                msg.range = self.obstacle_range
-                self.get_logger().info(f'Obstacle detected by {name} sensor')
-            else:
-                msg.range = self.range_max
+        if right_detected:
+            self.get_logger().info('Obstacle detected RIGHT')
 
-            self.publishers[name].publish(msg)
+        # Left
+        left_detected = (self.left_line.get_value() == 0)
+        left_msg = self.make_range_msg('ir_left_link', left_detected)
+        self.left_pub.publish(left_msg)
+
+        if left_detected:
+            self.get_logger().info('Obstacle detected LEFT')
+
+        # Rear
+        rear_detected = (self.rear_line.get_value() == 0)
+        rear_msg = self.make_range_msg('ir_rear_link', rear_detected)
+        self.rear_pub.publish(rear_msg)
+
+        if rear_detected:
+            self.get_logger().info('Obstacle detected REAR')
 
     def destroy_node(self):
-        for line in self.lines.values():
-            line.release()
+        self.front_line.release()
+        self.right_line.release()
+        self.left_line.release()
+        self.rear_line.release()
 
         self.chip.close()
         super().destroy_node()
