@@ -6,10 +6,10 @@ ekf_filter_node:
     two_d_mode: true
     publish_tf: true
 
-    # base_link is the URDF root (MOLA broadcasts base_link->base_footprint).
+    # base_footprint is the URDF root (MOLA broadcasts base_footprint->base_link).
     map_frame: map
     odom_frame: odom
-    base_link_frame: base_link
+    base_link_frame: base_footprint
     world_frame: odom
 
     # Wheel Odometry 
