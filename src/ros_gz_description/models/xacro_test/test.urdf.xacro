@@ -75,23 +75,8 @@
 
   <!-- ==================== LINKS AND JOINTS ==================== -->
 
-  <!-- ============================================================
-       TF OWNERSHIP
-       ============================================================
-       map            <- mola_lidar_odometry  (REP-105)
-       odom           <- ekf_filter_node      (world_frame=odom,
-                                               base_link_frame=base_link)
-       base_link      <- URDF root (this link)
-       base_footprint <- mola's static broadcaster, child of base_link
-                         (do NOT declare it here; declaring it would
-                         duplicate that static TF and trigger
-                         TF_REPEATED_DATA spam)
-       body_link, wheels, imu_link, camera_link, laser
-                      <- this URDF (all rigidly attached to base_link
-                         via body_link)
-       ============================================================ -->
   <link name="base_footprint"/>
-
+  
   <joint name="body_link_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="body_link"/>
@@ -282,33 +267,28 @@
 
 
 
-  <!-- ============================================================
-       LIDAR MOUNT  (rigid in URDF on purpose)
-       ============================================================
-       The LD06 sits on a hobby-servo cradle that physically nods
-       +/- 30 deg, but the lidar3d ROS node already de-tilts every
-       point using the live servo-angle feedback and publishes the
-       resulting 3D cloud in the LEVEL `body_link` frame.
-
-       Therefore the URDF must NOT also tilt `laser` independently
-       in TF; doing that creates two uncorrelated copies of the
-       tilt motion: the cloud stays flat in body_link while the
-       URDF visual nods around it, and any small MOLA pitch wobble
-       then shows up as the entire world tilting under a level
-       robot in RViz.
-
-       Keep this joint FIXED.  If you ever want to visualise the
-       servo angle on its own, do it in a debug-only TF (e.g. a
-       separate `lidar_tilt_visual_link` driven by joint_states)
-       that nothing in the SLAM pipeline subscribes to.
-       ============================================================
-       Offset: hinge sits ${s1+s5} above body_link origin, sensor
-       optical centre is +32 mm above the hinge.
-       ============================================================ -->
-  <joint name="lidar_joint" type="fixed">
+  <!-- HINGE LINK (Vippepunktet) -->
+  <joint name="lidar_joint" type="revolute">
     <parent link="body_link"/>
+    <child link="lidar_hinge_link"/>
+    <origin xyz="0 0 ${s1+s5}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/> <!-- Vipper opp og ned om Y-aksen -->
+    <limit lower="-0.785398" upper="0.785398" effort="10.0" velocity="5.0"/> <!-- +/- 45 grader -->
+    <dynamics damping="0.1" friction="0.1"/>
+  </joint>
+
+  <link name="lidar_hinge_link">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <!-- SENSOR LINK (Forskyvningen på 32mm over vippepunktet) -->
+  <joint name="lidar_sensor_joint" type="fixed">
+    <parent link="lidar_hinge_link"/>
     <child link="laser"/>
-    <origin xyz="0 0 ${s1+s5+0.032}" rpy="0 0 0"/>
+    <origin xyz="0 0 0.032" rpy="0 0 0"/> <!-- 32 mm opp (Z-aksen) -->
   </joint>
 
   <link name="laser">
