@@ -28,7 +28,7 @@ class BNO085Node(Node):
         self.declare_parameter("frame_id", "imu_link")
         self.declare_parameter("i2c_bus", 1)
         self.declare_parameter("publish_rate_hz", 50.0)
-        self.declare_parameter("report_interval_us", 30_000)
+        self.declare_parameter("report_interval_us", 40_000)
         self.declare_parameter("use_game_rotation_vector", True)
         self.declare_parameter("orientation_covariance_diagonal", [0.05, 0.05, 0.08])
         self.declare_parameter("angular_velocity_covariance_diagonal", [0.02, 0.02, 0.04])
