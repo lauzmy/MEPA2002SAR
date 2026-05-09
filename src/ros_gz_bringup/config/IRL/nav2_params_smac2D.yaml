@@ -296,22 +296,22 @@ collision_monitor:
       enabled: True
       obstacle_angle: 0.2 
     front_ir:
-      type: "ir"
+      type: "range"
       topic: "/ir/front"
       enabled: True
       obstacle_angle: 0.2
     rear_ir:
-      type: "ir"
+      type: "range"
       topic: "/ir/rear"
       enabled: True
       obstacle_angle: 0.2
     left_ir:
-      type: "ir"
+      type: "range"
       topic: "/ir/left"
       enabled: True
       obstacle_angle: 0.2
     right_ir:
-      type: "ir"
+      type: "range"
       topic: "/ir/right"
       enabled: True 
       obstacle_angle: 0.2
