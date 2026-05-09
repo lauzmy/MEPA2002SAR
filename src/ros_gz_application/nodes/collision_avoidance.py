@@ -36,7 +36,10 @@ class CollisionAvoidance(Node):
 
     def read_sensors(self):
         for name, pin in zip(self.sensor_names, self.sensor_pins):
-            obstacle_detected = GPIO.input(pin) == GPIO.LOW
+            if GPIO.input(pin) == GPIO.LOW:
+                obstacle_detected = self.obstacle_range
+            else:
+                no_obstacle = self.range_max
 
             msg = Range()
             msg.header.stamp = self.get_clock().now().to_msg()
@@ -49,7 +52,8 @@ class CollisionAvoidance(Node):
             if obstacle_detected:
                 msg.range = self.obstacle_range
                 self.get_logger().info('Obstacle detected by %s sensor!' % name)
-            else:   
+              
+            elif no_obstacle:
                 msg.range = self.range_max
                 self.get_logger().info('No obstacle detected by %s sensor.' % name)
         
