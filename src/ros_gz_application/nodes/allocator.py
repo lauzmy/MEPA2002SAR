@@ -224,7 +224,7 @@ class MecanumAllocator(Node):
         odom = Odometry()
         odom.header.stamp = current_time.to_msg()
         odom.header.frame_id = "odom"
-        odom.child_frame_id = "base_footprint" # Fra ekf_imu oppsettet ditt
+        odom.child_frame_id = "base_link" # Fra ekf_imu oppsettet ditt
 
         odom.pose.pose.position.x = self.x
         odom.pose.pose.position.y = self.y
