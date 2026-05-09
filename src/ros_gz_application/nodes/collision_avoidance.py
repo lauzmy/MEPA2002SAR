@@ -12,6 +12,11 @@ class CollisionAvoidance(Node):
     def __init__(self):
         super().__init__('collision_avoidance')
 
+        # active_low=True means LOW voltage indicates obstacle.
+        self.declare_parameter('active_low', True)
+        self.active_low = bool(self.get_parameter('active_low').value)
+        
+
         # Sensor order: [front, right, left, rear]
         self.sensor_names = ['front', 'right', 'left', 'rear']
         self.sensor_pins = [27, 17, 22, 23]
@@ -29,18 +34,21 @@ class CollisionAvoidance(Node):
 
         GPIO.setmode(GPIO.BCM)
         for pin in self.sensor_pins:
-            GPIO.setup(pin, GPIO.IN)
+            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
         self.timer = self.create_timer(0.1, self.read_sensors)
-        self.get_logger().info('CollisionAvoidance started using GPIO only')
 
     def read_sensors(self):
         for name, pin in zip(self.sensor_names, self.sensor_pins):
+            """
             if GPIO.input(pin) == GPIO.LOW:
                 obstacle_detected = self.obstacle_range
-            else:
+            elif GPIO.input(pin) == GPIO.HIGH:
                 no_obstacle = self.range_max
-
+            """
+            raw_level = GPIO.input(pin)
+            obstacle_detected = (raw_level == GPIO.LOW) if self.active_low else (raw_level == GPIO.HIGH)
+            
             msg = Range()
             msg.header.stamp = self.get_clock().now().to_msg()
             msg.header.frame_id = name
@@ -49,11 +57,12 @@ class CollisionAvoidance(Node):
             msg.min_range = self.range_min
             msg.max_range = self.range_max
 
+            
             if obstacle_detected:
                 msg.range = self.obstacle_range
                 self.get_logger().info('Obstacle detected by %s sensor!' % name)
               
-            elif no_obstacle:
+            else:
                 msg.range = self.range_max
                 self.get_logger().info('No obstacle detected by %s sensor.' % name)
         
@@ -65,7 +74,7 @@ class CollisionAvoidance(Node):
                 self.pub_left.publish(msg)
             elif name == 'rear':
                 self.pub_rear.publish(msg)
-
+            
 
     def destroy_node(self):
         GPIO.cleanup()
