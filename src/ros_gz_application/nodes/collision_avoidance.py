@@ -35,7 +35,7 @@ class CollisionAvoidance(Node):
         self.get_logger().info('CollisionAvoidance started using GPIO only')
 
     def read_sensors(self):
-        for (name, pin) in enumerate(zip(self.sensor_names, self.sensor_pins)):
+        for name, pin in zip(self.sensor_names, self.sensor_pins):
             obstacle_detected = GPIO.input(pin) == GPIO.LOW
 
             msg = Range()
@@ -55,7 +55,7 @@ class CollisionAvoidance(Node):
             elif name == 'rear':
                 self.pub_rear.publish(msg)
 
-            self.get_logger().info('Published IR sensor readings:', msg)
+            self.get_logger().info('Published IR sensor readings: %s' % name)
 
     def destroy_node(self):
         GPIO.cleanup()
