@@ -32,11 +32,14 @@ class CollisionAvoidance(Node):
         self.rear_line = self.setup_gpio(self.rear_pin, 'rear')
 
         # Sensor config
-        self.obstacle_range = 0.06
-        self.obstacle_range_rearAfront = 0.05
+        self.obstacle_range_front = 0.04
+        self.obstacle_range_right = 0.06
+        self.obstacle_range_left = 0.06
+        self.obstacle_range_rear = 0.04
+
         self.range_min = 0.02
         self.range_max = 0.10
-
+        
         self.timer = self.create_timer(0.1, self.read_sensors)
 
         self.get_logger().info('IR collision node started')
@@ -49,7 +52,7 @@ class CollisionAvoidance(Node):
         )
         return line
 
-    def make_range_msg(self, frame_id, obstacle_detected):
+    def make_range_msg(self, frame_id, obstacle_detected, obstacle_range):
         msg = Range()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = frame_id
@@ -60,7 +63,7 @@ class CollisionAvoidance(Node):
         msg.max_range = self.range_max
 
         if obstacle_detected:
-            msg.range = self.obstacle_range
+            msg.range = obstacle_range
         else:
             msg.range = float('inf')
 
@@ -70,7 +73,7 @@ class CollisionAvoidance(Node):
 
         # Front
         front_detected = (self.front_line.get_value() == 0)
-        front_msg = self.make_range_msg('ir_front_link', front_detected)
+        front_msg = self.make_range_msg('ir_front_link', front_detected, self.obstacle_range_front)
         self.front_pub.publish(front_msg)
 
         if front_detected:
@@ -78,7 +81,7 @@ class CollisionAvoidance(Node):
 
         # Right
         right_detected = (self.right_line.get_value() == 0)
-        right_msg = self.make_range_msg('ir_right_link', right_detected)
+        right_msg = self.make_range_msg('ir_right_link', right_detected, self.obstacle_range_right)
         self.right_pub.publish(right_msg)
 
         if right_detected:
@@ -86,7 +89,7 @@ class CollisionAvoidance(Node):
 
         # Left
         left_detected = (self.left_line.get_value() == 0)
-        left_msg = self.make_range_msg('ir_left_link', left_detected)
+        left_msg = self.make_range_msg('ir_left_link', left_detected, self.obstacle_range_left)
         self.left_pub.publish(left_msg)
 
         if left_detected:
@@ -94,7 +97,7 @@ class CollisionAvoidance(Node):
 
         # Rear
         rear_detected = (self.rear_line.get_value() == 0)
-        rear_msg = self.make_range_msg('ir_rear_link', rear_detected)
+        rear_msg = self.make_range_msg('ir_rear_link', rear_detected, self.obstacle_range_rear)
         self.rear_pub.publish(rear_msg)
 
         if rear_detected:
