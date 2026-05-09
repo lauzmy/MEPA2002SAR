@@ -485,6 +485,6 @@
     <joint name="base_footprint_to_base_link" type="fixed">
         <parent link="base_footprint"/>
         <child link="base_link"/>
-        <origin xyz="0 0 0.025" rpy="0 0 -1.5708"/>
+        <origin xyz="0 0 0.025" rpy="0 0 0"/>
     </joint>
 </robot>
