@@ -390,7 +390,7 @@
         <parent link="base_link" />
         <child link="upper_level_link" />
     </joint>
-    <joint name="Upper-Level_Revolute-3" type="continuous">
+    <joint name="Upper-Level_Revolute-3" type="fixed">
         <origin xyz="4.479000000000011e-05 -3.5119999999999996e-05 0.08375145" rpy="-1.6930901125533616e-15 -1.5707963267948966 0" />
         <parent link="upper_level_link" />
         <child link="lidar_mount_link" />
