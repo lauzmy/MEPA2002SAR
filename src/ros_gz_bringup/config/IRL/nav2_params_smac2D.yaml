@@ -294,32 +294,34 @@ collision_monitor:
       type: "scan"
       topic: "/scan"
       enabled: True
-      obstacle_angle: 0.2 
+      obstacles_angle: 0.2 
     front_ir:
       type: "range"
       topic: "/ir/front"
       enabled: True  # Front IR is very noisy, disable for now
-      obstacle_angle: 0.2
+      obstacles_angle: 0.2
     rear_ir:
       type: "range"
       topic: "/ir/rear"
       enabled: True  # Rear IR is very noisy, disable for now
-      obstacle_angle: 0.2
+      obstacles_angle: 0.2
     left_ir:
       type: "range"
       topic: "/ir/left"
       enabled: True  # Left IR is very noisy, disable for now
-      obstacle_angle: 0.2
+      obstacles_angle: 0.2
     right_ir:
       type: "range"
       topic: "/ir/right"
       enabled: True  # Right IR is very noisy, disable for now
-      obstacle_angle: 0.2
+      obstacles_angle: 0.2
     polygons: ["slowdown_polygon"]
     slowdown_polygon:
       type: "polygon"
       points: "[[0.15, 0.12], [0.15, -0.12], [-0.15, -0.12], [-0.15, 0.12]]"
       action_type: "slowdown"
+      min_point: 2
+      slowdown_factor: 0.3
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
 
