@@ -147,7 +147,7 @@ def generate_launch_description():
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
     nav2_params_file = os.path.join(pkg_project_bringup, 'config', 'IRL', 'nav2_params_smac2D.yaml')
 
-    nav2 = IncludeLaunchDescription(
+    nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')
         ),
@@ -155,7 +155,12 @@ def generate_launch_description():
             'use_sim_time': 'False',
             'params_file': nav2_params_file
         }.items(),
-        condition=IfCondition(LaunchConfiguration('nav2'))
+    )
+
+    nav2 = TimerAction(
+        period=5.0,
+        actions=[nav2_launch],
+        condition=IfCondition(LaunchConfiguration('nav2')),
     )
 
     explore_lite_node = Node(
