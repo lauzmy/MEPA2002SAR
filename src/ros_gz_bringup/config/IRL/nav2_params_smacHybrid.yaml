@@ -206,7 +206,7 @@ planner_server:
       plugin: "nav2_smac_planner::SmacPlannerHybrid"  # In Iron and older versions, "/" was used instead of "::"
       downsample_costmap: false                       # whether or not to downsample the map
       downsampling_factor: 1                          # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
-      tolerance: 0.15hv                                 # dist-to-goal heuristic cost (distance) for valid tolerance endpoints if exact goal cannot be found.
+      tolerance: 0.15                                 # dist-to-goal heuristic cost (distance) for valid tolerance endpoints if exact goal cannot be found.
       allow_unknown: true                             # allow traveling in unknown space
       max_iterations: 1000000                         # maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
       max_on_approach_iterations: 1000                # Maximum number of iterations after within tolerances to continue to try to find exact solution
