@@ -282,7 +282,10 @@ class Lidar3D(Node):
             port=uart_port, baud=uart_baud, history=self._angles,
             angle_offset_rad=angle_offset, invert=invert,
             clock=self.get_clock(), logger=self.get_logger())
-        self._uart.start()
+        if not sim:
+            self._uart.start()
+        else:
+            self.get_logger().info('sim=True -> UART angle reader disabled.')
 
         # ── Publishers / subscribers ──────────────────────────────────────
         self._cmd_pub = self.create_publisher(Float64, self._cmd_topic, 10)

@@ -1,5 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
-<robot name="gregor">
+<robot name="gregor" xmlns:gz="http://gazebosim.org/schema">
+    <link name="base_footprint"/>
+    <joint name="base_footprint_to_base_link" type="fixed">
+        <parent link="base_footprint"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 0.025" rpy="0 0 0"/>
+    </joint>
+
     <link name="upper_level_link">
         <inertial>
             <origin xyz="0.0023967975342630166 -0.0013615270577073536 0.03779211299373483" rpy="0.0 -0.0 0.0" />
@@ -310,13 +317,13 @@
             <mass value="0.0111568875" />
             <inertia ixx="5.422712195312453e-07" iyy="7.170624570312495e-07" izz="1.0343364453124912e-06" ixy="-3.705769144237564e-22" iyz="1.5387579684724216e-72" ixz="-7.676236084492097e-22" />
         </inertial>
-        <visual name="Avstands-sensor-høyre_visual">
+        <visual name="Avstands-sensor-hoyre_visual">
             <origin xyz="0.013462007936543627 -0.019104984548618534 -0.00019999999999990693" rpy="3.252606517435962e-19 4.8572257327350556e-17 1.2490009027033014e-16" />
             <geometry>
-                <mesh filename="package://gregor_description/meshes/Avstands-sensor-høyre.stl" scale="0.001 0.001 0.001" />
-            </geometry>
+                <mesh filename="package://gregor_description/meshes/Avstands-sensor-hoyre.stl" scale="0.001 0.001 0.001" />
+        </geometry>
         </visual>
-        <collision name="Avstands-sensor-høyre_collision">
+        <collision name="Avstands-sensor-hoyre_collision">
             <origin xyz="0.013462007936543627 -0.019104984548618534 -0.00019999999999990693" rpy="3.252606517435962e-19 4.8572257327350556e-17 1.2490009027033014e-16" />
             <geometry>
                 <mesh filename="package://gregor_description/meshes/Avstands-sensor-høyre.stl" scale="0.001 0.001 0.001" />
@@ -390,11 +397,13 @@
         <parent link="base_link" />
         <child link="upper_level_link" />
     </joint>
-    <joint name="Upper-Level_Revolute-3" type="continuous">
+    <joint name="Upper-Level_Revolute-3" type="revolute">
         <origin xyz="4.479000000000011e-05 -3.5119999999999996e-05 0.08375145" rpy="-1.6930901125533616e-15 -1.5707963267948966 0" />
         <parent link="upper_level_link" />
         <child link="lidar_mount_link" />
         <axis xyz="9.398538128609942e-32 -0.9999999999999996 -1.6930901125533608e-15" />
+        <limit lower="-0.785398" upper="0.785398" effort="10.0" velocity="5.0"/>
+        <dynamics damping="0.1" friction="0.1"/>
     </joint>
     <joint name="LiDAR-Mount_Rigid-4" type="fixed">
         <origin xyz="0.006150000000000003 3.469446951953614e-20 -2.1069999999999702e-05" rpy="1.102916357619544e-47 1.570796326794895 0" />
@@ -441,6 +450,8 @@
         <parent link="motor_rr_link" />
         <child link="wheel_rr_link" />
         <axis xyz="0.0 -1.0 -4.022647846648095e-51" />
+        <limit effort="50000" velocity="10"/>
+        <dynamics damping="1.0" friction="1.0"/>
     </joint>
     <joint name="Chassie_Rigid-23" type="fixed">
         <origin xyz="-0.04999999999627474 -0.08000000013038511 -0.019000000000000152" rpy="-1.5707963267948968 -1.5707963267948966 0" />
@@ -462,18 +473,24 @@
         <parent link="motor_rl_link" />
         <child link="wheel_rl_link" />
         <axis xyz="-3.503246160812043e-46 1.0 2.495984093634733e-46" />
+        <limit effort="50000" velocity="10"/>
+        <dynamics damping="1.0" friction="1.0"/>
     </joint>
     <joint name="Motor-FR_Revolute-27" type="continuous">
         <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -0.0 0.0" />
         <parent link="motor_fr_link" />
         <child link="wheel_fr_link" />
         <axis xyz="0.0 -1.0 2.1209945128196103e-51" />
+        <limit effort="50000" velocity="10"/>
+        <dynamics damping="1.0" friction="1.0"/>
     </joint>
     <joint name="Motor-FL_Revolute-28" type="continuous">
         <origin xyz="0.0 0.0 0.0" rpy="-2.660190735689466e-33 -0.0 0.0" />
         <parent link="motor_fl_link" />
         <child link="wheel_fl_link" />
         <axis xyz="0.0 1.0 2.4034014453635364e-47" />
+        <limit effort="50000" velocity="10"/>
+        <dynamics damping="1.0" friction="1.0"/>
     </joint>
     <joint name="Upper-Level_Rigid-29" type="fixed">
         <origin xyz="0.01349606 -0.08622216999999999 -0.018" rpy="0.0 -0.0 0.0" />
@@ -481,10 +498,132 @@
         <child link="range_right_link" />
     </joint>
 
-    <link name="base_footprint"/>
-    <joint name="base_footprint_to_base_link" type="fixed">
-        <parent link="base_footprint"/>
-        <child link="base_link"/>
-        <origin xyz="0 0 0.025" rpy="0 0 1.5707963267948966"/>
-    </joint>
+    <!-- ==================== WHEEL FRICTION ==================== -->
+    <!-- fdir1 sets the free-rolling direction for each mecanum wheel.
+         The pattern (diagonal direction) must match the physical roller angle. -->
+    <gazebo reference="wheel_rr_link">
+        <collision>
+            <surface><friction><ode>
+                <mu>1.5</mu><mu2>0.0</mu2>
+                <fdir1 gz:expressed_in="base_footprint">1 -1 0</fdir1>
+            </ode></friction></surface>
+        </collision>
+    </gazebo>
+    <gazebo reference="wheel_rl_link">
+        <collision>
+            <surface><friction><ode>
+                <mu>1.5</mu><mu2>0.0</mu2>
+                <fdir1 gz:expressed_in="base_footprint">1 1 0</fdir1>
+            </ode></friction></surface>
+        </collision>
+    </gazebo>
+    <gazebo reference="wheel_fr_link">
+        <collision>
+            <surface><friction><ode>
+                <mu>1.5</mu><mu2>0.0</mu2>
+                <fdir1 gz:expressed_in="base_footprint">1 1 0</fdir1>
+            </ode></friction></surface>
+        </collision>
+    </gazebo>
+    <gazebo reference="wheel_fl_link">
+        <collision>
+            <surface><friction><ode>
+                <mu>1.5</mu><mu2>0.0</mu2>
+                <fdir1 gz:expressed_in="base_footprint">1 -1 0</fdir1>
+            </ode></friction></surface>
+        </collision>
+    </gazebo>
+
+    <!-- ==================== IMU SENSOR ==================== -->
+    <gazebo reference="imu_link">
+        <sensor name="imu_sensor" type="imu">
+            <always_on>true</always_on>
+            <update_rate>100</update_rate>
+            <topic>/imu</topic>
+            <imu>
+                <angular_velocity>
+                    <x><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></x>
+                    <y><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></y>
+                    <z><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></z>
+                </angular_velocity>
+                <linear_acceleration>
+                    <x><noise type="gaussian"><mean>0.0</mean><stddev>0.017</stddev></noise></x>
+                    <y><noise type="gaussian"><mean>0.0</mean><stddev>0.017</stddev></noise></y>
+                    <z><noise type="gaussian"><mean>0.0</mean><stddev>0.017</stddev></noise></z>
+                </linear_acceleration>
+            </imu>
+        </sensor>
+    </gazebo>
+
+    <!-- ==================== LIDAR SENSOR ==================== -->
+    <!-- Attached to the `laser` link, which is already positioned by the URDF
+         kinematic chain (base_link → upper_level_link → [Upper-Level_Revolute-3]
+         → lidar_mount_link → laser). Tilt in sim matches the real robot exactly. -->
+    <gazebo reference="laser">
+        <sensor name="lidar" type="lidar">
+            <always_on>true</always_on>
+            <update_rate>10</update_rate>
+            <visualize>true</visualize>
+            <topic>/scan</topic>
+            <gz_frame_id>laser</gz_frame_id>
+            <lidar>
+                <scan>
+                    <horizontal>
+                        <samples>720</samples>
+                        <resolution>1</resolution>
+                        <min_angle>-3.14159</min_angle>
+                        <max_angle>3.14159</max_angle>
+                    </horizontal>
+                    <vertical>
+                        <samples>1</samples>
+                        <resolution>1</resolution>
+                        <min_angle>0.0</min_angle>
+                        <max_angle>0.0</max_angle>
+                    </vertical>
+                </scan>
+                <range>
+                    <min>0.12</min>
+                    <max>12.0</max>
+                    <resolution>0.01</resolution>
+                </range>
+            </lidar>
+        </sensor>
+    </gazebo>
+
+    <!-- ==================== GAZEBO PLUGINS ==================== -->
+    <gazebo>
+        <!-- Mecanum drive: subscribes /cmd_vel, publishes odometry and TF.
+             Wheelbase and wheel_separation are approximate — tune if drift is observed. -->
+        <plugin filename="gz-sim-mecanum-drive-system"
+                name="gz::sim::systems::MecanumDrive">
+            <front_left_joint>Motor-FL_Revolute-28</front_left_joint>
+            <front_right_joint>Motor-FR_Revolute-27</front_right_joint>
+            <back_left_joint>Motor-RL_Revolute-26</back_left_joint>
+            <back_right_joint>Motor-RR_Revolute-22</back_right_joint>
+            <wheelbase>0.100</wheelbase>
+            <wheel_separation>0.145</wheel_separation>
+            <wheel_radius>0.0375</wheel_radius>
+            <topic>/cmd_vel</topic>
+            <odom_topic>/wheel/odometry</odom_topic>
+            <tf_topic>/model/gregor/tf</tf_topic>
+            <frame_id>odom</frame_id>
+            <child_frame_id>base_footprint</child_frame_id>
+            <odom_publish_frequency>50</odom_publish_frequency>
+        </plugin>
+
+        <!-- Publishes all joint states so robot_state_publisher and RViz stay in sync -->
+        <plugin filename="gz-sim-joint-state-publisher-system"
+                name="gz::sim::systems::JointStatePublisher">
+        </plugin>
+
+        <!-- Tilt joint position controller: receives /lidar_cmd_pos -->
+        <plugin filename="gz-sim-joint-position-controller-system"
+                name="gz::sim::systems::JointPositionController">
+            <joint_name>Upper-Level_Revolute-3</joint_name>
+            <topic>/lidar_cmd_pos</topic>
+            <p_gain>10.0</p_gain>
+            <i_gain>0.1</i_gain>
+            <d_gain>0.1</d_gain>
+        </plugin>
+    </gazebo>
 </robot>

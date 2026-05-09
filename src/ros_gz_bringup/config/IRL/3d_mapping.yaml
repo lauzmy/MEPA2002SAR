@@ -1,0 +1,37 @@
+### 3d_mapping.yaml ###
+# Parameters for the 3dMapping.launch.py bringup.
+#
+# Set sim: true to launch with Gazebo instead of real hardware.
+_launch_settings:
+  ros__parameters:
+    sim: true
+
+ldlidar:
+  ros__parameters:
+    serial_port: /dev/ttyAMA0
+    topic_name: /scan
+    lidar_frame: laser
+    lidar_type: LD06
+
+lidar3d:
+  ros__parameters:
+    # Tilt sweep
+    min_angle_deg: -30.0
+    max_angle_deg: 30.0
+    sweep_period_s: 4.0
+    # Topics
+    scan_topic: /scan
+    cloud_topic: /lidar3d/points
+    joint_state_topic: /lidar_joint_states
+    cmd_topic: /lidar_cmd_pos
+    # TF
+    joint_name: Upper-Level_Revolute-3
+    output_frame: base_link
+    hinge_z_offset_m: 0.09175145   # base_link → upper_level_link (0.008) + upper_level_link → revolute axis (0.08375145)
+    sensor_z_offset_m: 0.03315     # revolute axis → LD06 measuring point
+    # UART angle feedback
+    uart_port: /dev/ttyAMA1
+    uart_baud: 921600
+    angle_invert: true
+    # Hardware PWM
+    pwm_chip: 0
