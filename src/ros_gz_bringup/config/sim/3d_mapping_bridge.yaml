@@ -44,6 +44,8 @@
   direction: GZ_TO_ROS
 
 # Gazebo MecanumDrive odom TF → ROS
+# robot_state_publisher handles all static URDF transforms (base_footprint→base_link etc.)
+# Only the dynamic odom→base_footprint needs to come from Gazebo.
 - ros_topic_name: "/tf"
   gz_topic_name: "/model/gregor/tf"
   ros_type_name: "tf2_msgs/msg/TFMessage"

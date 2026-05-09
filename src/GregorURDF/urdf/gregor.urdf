@@ -4,7 +4,7 @@
     <joint name="base_footprint_to_base_link" type="fixed">
         <parent link="base_footprint"/>
         <child link="base_link"/>
-        <origin xyz="0 0 0.025" rpy="0 0 0"/>
+        <origin xyz="0 0 0.025" rpy="0 0 1.5707963"/>  <!-- was rpy="0 0 0" -->
     </joint>
 
     <link name="upper_level_link">
@@ -228,10 +228,14 @@
                 <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FL.stl" scale="0.001 0.001 0.001" />
             </geometry>
         </visual>
+        <!-- Smooth cylinder collision: required for the gz mecanum-drive
+             fdir1/mu2 friction trick to produce real sideways motion.
+             Visual still uses the mecanum STL above so it looks correct.
+             Cylinder axis (local Z) aligned with the wheel rotation axis (Y). -->
         <collision name="Mecanum-wheel-FL_collision">
-            <origin xyz="-0.03738974153915106 -0.10002300971390483 -0.03522473364481626" rpy="-1.570796326794895 0.7853981633974408 -1.570796326794897" />
+            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
             <geometry>
-                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FL.stl" scale="0.001 0.001 0.001" />
+                <cylinder radius="0.0375" length="0.030" />
             </geometry>
         </collision>
     </link>
@@ -267,9 +271,9 @@
             </geometry>
         </visual>
         <collision name="Mecanum-wheel-RL_collision">
-            <origin xyz="-0.03738974153915007 0.10002300579155403 0.03522473608918917" rpy="1.5707963267948983 -0.7853981633974556 1.5707963267948857" />
+            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
             <geometry>
-                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-RL.stl" scale="0.001 0.001 0.001" />
+                <cylinder radius="0.0375" length="0.030" />
             </geometry>
         </collision>
     </link>
@@ -286,9 +290,9 @@
             </geometry>
         </visual>
         <collision name="Mecanum-wheel-RR_collision">
-            <origin xyz="-0.03738974153915103 -0.1000230064304689 -0.03522473459205803" rpy="-1.5707963267948966 0.7853981633975144 -1.5707963267948968" />
+            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
             <geometry>
-                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-RR.stl" scale="0.001 0.001 0.001" />
+                <cylinder radius="0.0375" length="0.030" />
             </geometry>
         </collision>
     </link>
@@ -305,9 +309,9 @@
             </geometry>
         </visual>
         <collision name="Mecanum-wheel-FR_collision">
-            <origin xyz="-0.03738974153915089 0.10002300643047335 0.03522473675271636" rpy="1.5707963267948986 -0.7853981633974091 1.570796326794898" />
+            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
             <geometry>
-                <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FR.stl" scale="0.001 0.001 0.001" />
+                <cylinder radius="0.0375" length="0.030" />
             </geometry>
         </collision>
     </link>
@@ -452,10 +456,10 @@
         <child link="motor_rr_link" />
     </joint>
     <joint name="Motor-RR_Revolute-22" type="continuous">
-        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -0.0 0.0" />
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 0.0 0.0" />
         <parent link="motor_rr_link" />
         <child link="wheel_rr_link" />
-        <axis xyz="0.0 -1.0 -4.022647846648095e-51" />
+        <axis xyz="0.0 1.0 0.0" />
         <limit effort="50000" velocity="10"/>
         <dynamics damping="1.0" friction="1.0"/>
     </joint>
@@ -475,26 +479,26 @@
         <child link="motor_rl_link" />
     </joint>
     <joint name="Motor-RL_Revolute-26" type="continuous">
-        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 7.022514532037904e-97 3.503246160812043e-46" />
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 0.0 0.0" />
         <parent link="motor_rl_link" />
         <child link="wheel_rl_link" />
-        <axis xyz="-3.503246160812043e-46 1.0 2.495984093634733e-46" />
+        <axis xyz="0.0 1.0 0.0" />
         <limit effort="50000" velocity="10"/>
         <dynamics damping="1.0" friction="1.0"/>
     </joint>
     <joint name="Motor-FR_Revolute-27" type="continuous">
-        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 -0.0 0.0" />
+        <origin xyz="0.0 0.0 0.0" rpy="3.141592653589793 0.0 0.0" />
         <parent link="motor_fr_link" />
         <child link="wheel_fr_link" />
-        <axis xyz="0.0 -1.0 2.1209945128196103e-51" />
+        <axis xyz="0.0 -1.0 0.0" />
         <limit effort="50000" velocity="10"/>
         <dynamics damping="1.0" friction="1.0"/>
     </joint>
     <joint name="Motor-FL_Revolute-28" type="continuous">
-        <origin xyz="0.0 0.0 0.0" rpy="-2.660190735689466e-33 -0.0 0.0" />
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
         <parent link="motor_fl_link" />
         <child link="wheel_fl_link" />
-        <axis xyz="0.0 1.0 2.4034014453635364e-47" />
+        <axis xyz="0.0 -1.0 0.0" />
         <limit effort="50000" velocity="10"/>
         <dynamics damping="1.0" friction="1.0"/>
     </joint>
