@@ -73,7 +73,7 @@ def generate_launch_description():
         parameters=[
             {'serial_port': '/dev/ttyAMA0'},
             {'topic_name': '/scan'},
-            {'lidar_frame': 'laser'},
+            {'frame_id': 'laser'},
             {'lidar_type': 'LD06'}
         ]
     )
