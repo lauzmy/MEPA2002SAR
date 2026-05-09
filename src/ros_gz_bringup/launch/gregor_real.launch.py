@@ -204,6 +204,7 @@ def generate_launch_description():
         ldlidar_node,
         thermal_Reading,
         thermal_processor,
+        collision_avoidance,
         ekf_node,
         slam,
         nav2,
