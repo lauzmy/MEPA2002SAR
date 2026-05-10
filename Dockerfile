@@ -45,8 +45,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     v4l-utils \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x adafruit-extended-bus rpi-lgpio rpi_hardware_pwm ultralytics
+RUN pip3 install --break-system-packages \
+    adafruit-circuitpython-bno08x \
+    adafruit-extended-bus \
+    rpi-lgpio \
+    rpi_hardware_pwm
 
+RUN pip3 install --break-system-packages --ignore-installed numpy \
+    ultralytics
+    
 # Create a development user that matches the host UID/GID.
 RUN set -eux; \
     if getent group "${USERNAME}" >/dev/null; then \
