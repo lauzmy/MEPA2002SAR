@@ -231,6 +231,5 @@ def generate_launch_description():
         slam,
         nav2,
         explore,
-        exploration_monitor,
         ready_message,
     ])
