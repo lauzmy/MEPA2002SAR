@@ -318,7 +318,7 @@ collision_monitor:
     polygons: ["slowdown_polygon"]
     slowdown_polygon:
       type: "polygon"
-      points: "[[0.15, 0.12], [0.15, -0.12], [-0.15, -0.12], [-0.15, 0.12]]"
+      points: "[[0.18, 0.17], [0.18, -0.17], [-0.18, -0.17], [-0.18, 0.17]]"
       action_type: "slowdown"
       min_point: 1
       slowdown_factor: 0.3
