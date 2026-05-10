@@ -21,7 +21,7 @@ OPERATOR_MAP = {
 class ExplorationMonitor(Node):
     def __init__(self):
         super().__init__('exploration_monitor')
-        self.declare_parameter('map_path', '/maps/gregor_map')
+        self.declare_parameter('map_path', '/maps/gregor_maps')
         self.declare_parameter('idle_timeout', 25.0)
         self.declare_parameter('startup_grace', 30.0)
         self.declare_parameter('remote_target', '')  # manuell override
