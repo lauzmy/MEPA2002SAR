@@ -38,7 +38,7 @@ class CollisionAvoidance(Node):
         self.obstacle_range_rear = 0.04
 
         self.range_min = 0.02
-        self.range_max = 0.20
+        self.range_max = 0.50
         
         self.timer = self.create_timer(0.1, self.read_sensors)
 
