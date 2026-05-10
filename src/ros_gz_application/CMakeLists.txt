@@ -58,6 +58,12 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+	nodes/bamse_locator.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME bamse_locator
+)
+
+install(PROGRAMS
     nodes/exploration_monitor.py
     DESTINATION lib/${PROJECT_NAME}
     RENAME exploration_monitor

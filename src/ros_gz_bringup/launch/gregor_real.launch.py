@@ -115,6 +115,35 @@ def generate_launch_description():
         parameters=[{'use_sim_time': False}]
     )
 
+    YOLO_node = Node(
+        package='ros_gz_application',
+        executable='YOLO',
+        name='yolo_coco_node',
+        output='screen',
+        parameters=[{'use_sim_time': False}],
+    )
+
+    bamse_locator = Node(
+        package='ros_gz_application',
+        executable='bamse_locator',
+        name='bamse_locator',
+        output='screen',
+        parameters=[{
+            'use_sim_time': False,
+            'thermal_hfov_rad': 0.87,
+            'heat_threshold_c': 32.0,
+            'temp_band_min_c': 30.0,
+            'temp_band_max_c': 42.0,
+            'require_yolo_confirm': True,
+            'use_front_ir': True,
+            'ir_trigger_max_range_m': 0.10,
+            'stop_distance_m': 0.40,
+            'approach_step_m': 0.6,
+            'pause_explore': True,
+            'robot_frame': 'base_link',
+        }],
+    )
+
     collision_avoidance = Node(
         package='ros_gz_application',
         executable='collision_avoidance',
@@ -232,6 +261,8 @@ def generate_launch_description():
         slam,
         nav2,
         explore,
+        YOLO_node,
+        bamse_locator,
         exploration_monitor,
         ready_message,
     ])

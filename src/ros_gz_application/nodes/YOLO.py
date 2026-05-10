@@ -7,6 +7,7 @@ from ultralytics import YOLO
 import cv2
 import os
 from ament_index_python.packages import get_package_share_directory
+from vision_msgs.msg import Detection2DArray, Detection2D, ObjectHypothesisWithPose
 
 
 class YoloCocoNode(Node):
@@ -18,7 +19,7 @@ class YoloCocoNode(Node):
         default_pt_model = os.path.join(pkg_dir, 'yolo26n.pt')
 
         self.declare_parameter("model_path", default_pt_model)
-        self.declare_parameter("class_ids", [0]) # 0 is person in COCO, teddy bear is 77
+        self.declare_parameter("class_ids", [0, 77]) # 0 is person in COCO, teddy bear is 77
         self.declare_parameter("conf", 0.25)
         self.declare_parameter("imgsz", 640)
         
@@ -68,6 +69,7 @@ class YoloCocoNode(Node):
             Image, "/camera/image_raw", self.image_cb, 10
         )
         self.pub = self.create_publisher(Image, "/yolo_coco/image", 10)
+        self.det_pub = self.create_publisher(Detection2DArray, "/yolo/detections", 10)
 
     def image_cb(self, msg):
         now = self.get_clock().now()
@@ -116,6 +118,28 @@ class YoloCocoNode(Node):
 
         out = self.bridge.cv2_to_imgmsg(annotated_frame, encoding="bgr8")
         self.pub.publish(out)
+
+        det_array = Detection2DArray()
+        det_array.header = msg.header
+        if len(results) > 0:
+            for box in results[0].boxes:
+                cls_id = int(box.cls.item())
+                if cls_id not in self.class_ids:
+                    continue
+                conf = float(box.conf.item())
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                d = Detection2D()
+                d.header = msg.header
+                d.bbox.center.position.x = float((x1 + x2) / 2.0)
+                d.bbox.center.position.y = float((y1 + y2) / 2.0)
+                d.bbox.size_x = float(x2 - x1)
+                d.bbox.size_y = float(y2 - y1)
+                h = ObjectHypothesisWithPose()
+                h.hypothesis.class_id = str(cls_id)
+                h.hypothesis.score = conf
+                d.results.append(h)
+                det_array.detections.append(d)
+        self.det_pub.publish(det_array)
 
 def main():
     rclpy.init()

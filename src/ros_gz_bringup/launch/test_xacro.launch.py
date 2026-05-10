@@ -114,6 +114,26 @@ def generate_launch_description():
         name='yolo_coco_node',
         output='screen',
     )
+
+    bamse_locator = Node(
+        package='ros_gz_application',
+        executable='bamse_locator',
+        name='bamse_locator',
+        output='screen',
+        parameters=[{
+            'use_sim_time': True,
+            'thermal_hfov_rad': 0.95,
+            'heat_threshold_c': 30.0,
+            'temp_band_min_c': 30.0,
+            'temp_band_max_c': 50.0,
+            'require_yolo_confirm': False,
+            'use_front_ir': False,
+            'stop_distance_m': 0.45,
+            'approach_step_m': 0.7,
+            'pause_explore': True,
+            'robot_frame': 'base_footprint',
+        }],
+    )
     
     ekf_node = Node(
         package='robot_localization',
@@ -187,4 +207,6 @@ def generate_launch_description():
         slam,
         nav2,
         explore,
+        YOLO_node,
+        bamse_locator,
     ])
