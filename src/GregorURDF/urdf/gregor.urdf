@@ -233,7 +233,7 @@
              Visual still uses the mecanum STL above so it looks correct.
              Cylinder axis (local Z) aligned with the wheel rotation axis (Y). -->
         <collision name="Mecanum-wheel-FL_collision">
-            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
+            <origin xyz="0 -0.02654 0" rpy="1.5707963267948966 0 0" />
             <geometry>
                 <cylinder radius="0.0375" length="0.030" />
             </geometry>
@@ -271,7 +271,7 @@
             </geometry>
         </visual>
         <collision name="Mecanum-wheel-RL_collision">
-            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
+            <origin xyz="0 0.02654 0" rpy="1.5707963267948966 0 0" />
             <geometry>
                 <cylinder radius="0.0375" length="0.030" />
             </geometry>
@@ -290,7 +290,7 @@
             </geometry>
         </visual>
         <collision name="Mecanum-wheel-RR_collision">
-            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
+            <origin xyz="0 -0.02654 0" rpy="1.5707963267948966 0 0" />
             <geometry>
                 <cylinder radius="0.0375" length="0.030" />
             </geometry>
@@ -305,11 +305,14 @@
         <visual name="Mecanum-wheel-FR_visual">
             <origin xyz="-0.03738974153915089 0.10002300643047335 0.03522473675271636" rpy="1.5707963267948986 -0.7853981633974091 1.570796326794898" />
             <geometry>
+                <!-- NOTE: roller chirality on FR/RL visually looks Type-O (mirror of FL/RR).
+                     This is a cosmetic Fusion-export issue and does NOT affect simulated
+                     physics, which uses the smooth cylinder collision below + fdir1. -->
                 <mesh filename="package://gregor_description/meshes/Mecanum-wheel-FR.stl" scale="0.001 0.001 0.001" />
             </geometry>
         </visual>
         <collision name="Mecanum-wheel-FR_collision">
-            <origin xyz="0 0 0" rpy="1.5707963267948966 0 0" />
+            <origin xyz="0 0.02654 0" rpy="1.5707963267948966 0 0" />
             <geometry>
                 <cylinder radius="0.0375" length="0.030" />
             </geometry>
@@ -507,6 +510,29 @@
         <parent link="upper_level_link" />
         <child link="range_right_link" />
     </joint>
+
+    <!-- ==================== DISABLE NON-WHEEL COLLISIONS ====================
+         Only the four wheel cylinders should ever touch the ground. The body
+         mesh collisions (chassis, motors, sensor brackets, lidar mount,
+         battery, upper level) are concave triangle soup — ODE handles them
+         poorly, and any one of them dipping below the wheel-contact plane
+         causes the bobbing/yawing you see during strafing. -->
+    <gazebo reference="base_link">          <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="upper_level_link">    <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="battery_link">        <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="lidar_mount_link">    <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="laser">               <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="imu_link">            <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="camera_link">         <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="thermal_camera_link"> <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="range_front_link">    <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="range_rear_link">     <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="range_left_link">     <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="range_right_link">    <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="motor_fl_link">       <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="motor_fr_link">       <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="motor_rl_link">       <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
+    <gazebo reference="motor_rr_link">       <collision><surface><contact><collide_bitmask>0x0</collide_bitmask></contact></surface></collision></gazebo>
 
     <!-- ==================== WHEEL FRICTION ==================== -->
     <!-- fdir1 sets the free-rolling direction for each mecanum wheel.
