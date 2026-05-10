@@ -1,8 +1,28 @@
 ### ekf.yaml ###
+# robot_localization EKF for the Gazebo bringup.
+#
+# Owns the dynamic odom -> base_footprint /tf. The Gazebo MecanumDrive
+# plugin's own TF is intentionally NOT bridged (see
+# config/sim/3d_mapping_bridge.yaml) so this node is the single
+# publisher of that link.
+#
+# Inputs come from the ros_gz_bridge:
+#   /wheel/odometry  (nav_msgs/Odometry, from MecanumDrive plugin)
+#   /imu             (sensor_msgs/Imu,    from Gazebo IMU sensor)
+#
+# Output:
+#   /odometry/filtered  (consumed by MOLA-LO as a motion prior)
+
 ekf_filter_node:
   ros__parameters:
     use_sim_time: true
-    frequency: 30.0
+    # 50 Hz (was 15 Hz). The IMU streams at 100 Hz and the MecanumDrive
+    # plugin's odom at 50 Hz, so 50 Hz here gives MOLA-LO a per-EKF-tick
+    # motion prior that's dense enough to interpolate smoothly across a
+    # 0.5 s lidar sweep without yaw stair-steps. The previous 15 Hz left
+    # ~3-6° of yaw quantisation per scan during fast turns, which MOLA
+    # would attribute to spurious roll/pitch.
+    frequency: 50.0
     two_d_mode: true
     publish_tf: true
 
@@ -11,11 +31,29 @@ ekf_filter_node:
     base_link_frame: base_footprint
     world_frame: odom
 
-    # Wheel Odometry (from Gazebo MecanumDrive)
-    odom0: /odometry
+    # ---- Wheel odometry (Gazebo MecanumDrive plugin) ---------------------
+    # Fuse planar body twist (vx, vy, vyaw) only — absolute pose from a
+    # dead-reckoning plugin would just feed back its own integrated state.
+    odom0: /wheel/odometry
     odom0_config: [false, false, false,
                    false, false, false,
                    true,  true,  false,
                    false, false, true,
                    false, false, false]
     odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    # ---- IMU (Gazebo IMU sensor) -----------------------------------------
+    # Yaw rate only. Absolute orientation from a sim IMU is exact and would
+    # dominate the filter; accel is dominated by gravity in two_d_mode.
+    imu0: /imu
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true

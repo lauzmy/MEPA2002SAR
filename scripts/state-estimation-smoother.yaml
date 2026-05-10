@@ -1,0 +1,53 @@
+# =============================================================================
+#  State-estimation-smoother params for MEPA2002SAR (mecanum)
+# -----------------------------------------------------------------------------
+#  Based on the upstream
+#    /opt/ros/jazzy/share/mola_lidar_odometry/state-estimator-params/
+#      state-estimation-smoother.yaml
+#  but with the additional `kinematic_model` key the installed C++ smoother
+#  requires (the bundled YAML omits it, which causes:
+#     "Required parameter `kinematic_model` not an existing key in dictionary").
+#
+#  For our 4-wheel mecanum drive we want ConstantVelocity (holonomic). Override
+#  with MOLA_NAVSTATE_KINEMATIC_MODEL=KinematicModel::Tricycle if ever testing
+#  on a non-holonomic platform.
+# =============================================================================
+
+params:
+  # ------------ kinematic / motion model ------------
+  kinematic_model: ${MOLA_NAVSTATE_KINEMATIC_MODEL|KinematicModel::ConstantVelocity}
+
+  # If enabled, z, pitch and roll are pinned to 0 (flat-floor indoor robot).
+  enforce_planar_motion: ${MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION|true}
+
+  # ------------ time gating ------------
+  # Max time since last obs to still trust the velocity model.
+  max_time_to_use_velocity_model: ${MOLA_MAX_TIME_TO_USE_VELOCITY_MODEL|0.75}  # [s]
+
+  # Sliding window of past observations kept in the smoother.
+  sliding_window_length: 2.5  # [s]
+
+  # Warn if two consecutive keyframes are further apart than this.
+  time_between_frames_to_warning: 3.0  # [s]
+
+  # ------------ frame naming (used for tf publishing) ------------
+  vehicle_frame_name: "${MOLA_TF_BASE_LINK|base_link}"
+  reference_frame_name: "${MOLA_TF_MAP|map}"
+
+  # ------------ process noise ------------
+  sigma_random_walk_acceleration_linear:  ${MOLA_NAVSTATE_SIGMA_RANDOM_WALK_LINACC|1.0}   # [m/s²]
+  sigma_random_walk_acceleration_angular: ${MOLA_NAVSTATE_SIGMA_RANDOM_WALK_ANGACC|10.0}  # [rad/s²]
+  sigma_integrator_position:    0.1   # [m]
+  sigma_integrator_orientation: 1.0   # [rad]
+
+  sigma_twist_from_consecutive_poses_linear:  1.0  # [m/s]
+  sigma_twist_from_consecutive_poses_angular: 1.0  # [rad/s]
+
+  # ------------ initial twist guess ------------
+  initial_twist: ["${MOLA_INITIAL_VX|0.0}", 0.0, 0.0, 0.0, 0.0, 0.0]
+  initial_twist_sigma_lin: 20.0  # [m/s]
+  initial_twist_sigma_ang:  3.0  # [rad/s]
+
+  # ------------ robust kernel / outlier rejection ------------
+  robust_param: 3.0   # 0 disables the robust kernel
+  max_rmse:     2     # max inconsistencies before solution is discarded

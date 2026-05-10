@@ -43,14 +43,11 @@
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS
 
-# Gazebo MecanumDrive odom TF → ROS
-# robot_state_publisher handles all static URDF transforms (base_footprint→base_link etc.)
-# Only the dynamic odom→base_footprint needs to come from Gazebo.
-- ros_topic_name: "/tf"
-  gz_topic_name: "/model/gregor/tf"
-  ros_type_name: "tf2_msgs/msg/TFMessage"
-  gz_type_name: "gz.msgs.Pose_V"
-  direction: GZ_TO_ROS
+# NOTE: Gazebo's MecanumDrive plugin also publishes a dynamic
+# odom→base_footprint transform on /model/gregor/tf. We deliberately do
+# NOT bridge it: the robot_localization EKF (config/sim/ekf.yaml) owns
+# odom→base_footprint and would conflict with two publishers on /tf.
+# robot_state_publisher handles every other (static) URDF transform.
 
 # Gazebo joint states → ROS (covers all joints including tilt)
 - ros_topic_name: "/joint_states"

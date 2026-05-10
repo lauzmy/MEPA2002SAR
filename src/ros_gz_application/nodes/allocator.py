@@ -248,13 +248,24 @@ class MecanumAllocator(Node):
         odom.pose.covariance[28] = 0.01  # pitch
         odom.pose.covariance[35] = 0.01  # yaw (theta)
 
-        # Uncertainty for the velocity (twist)
-        odom.twist.covariance[0] = 0.01  # vx
-        odom.twist.covariance[7] = 0.01  # vy
-        odom.twist.covariance[14] = 0.01 # vz
-        odom.twist.covariance[21] = 0.01 # roll rate
-        odom.twist.covariance[28] = 0.01 # pitch rate
-        odom.twist.covariance[35] = 0.01 # yaw rate
+        # Uncertainty for the velocity (twist).
+        #
+        # vy and vyaw are SLIP-dominated on a mecanum platform: lateral
+        # motion comes from balanced roller forces (any unequal traction
+        # → phantom strafe in the integrated odom), and yaw rate is
+        # estimated from differential wheel speeds which lag real
+        # rotation when the rollers slip mid-turn. We were previously
+        # advertising 0.01 rad²/s² on vyaw, which caused the EKF to
+        # weight the wheel yaw rate ~equal to the BNO085 gyro and
+        # produced ~3-5° of yaw drift per turn that MOLA could not
+        # undo (its prior was too tight to overrule). 0.5 lets the IMU
+        # gyro dominate the yaw channel; 0.2 on vy reflects strafe slip.
+        odom.twist.covariance[0]  = 0.01  # vx   (forward, well-observed)
+        odom.twist.covariance[7]  = 0.20  # vy   (mecanum strafe slip)
+        odom.twist.covariance[14] = 0.01  # vz
+        odom.twist.covariance[21] = 0.01  # roll rate
+        odom.twist.covariance[28] = 0.01  # pitch rate
+        odom.twist.covariance[35] = 0.50  # yaw rate (mecanum slip; trust IMU instead)
 
         # Publish the odometry message
         self.odom_publisher.publish(odom)

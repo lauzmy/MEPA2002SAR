@@ -1,0 +1,79 @@
+# =============================================================================
+#  MOLA-LO offline system YAML for the MEPA2002SAR (mecanum) robot
+# -----------------------------------------------------------------------------
+#  Modelled on `lidar_odometry_from_rosbag2.yaml` shipped with
+#  `mola_lidar_odometry`, with one critical addition: the wheel-odometry sensor
+#  entry. Some versions of the upstream YAML omit it, which silently drops
+#  /wheel/odometry and prevents the smoother estimator from getting any motion
+#  prior — exactly the "unhandled topic" warning we hit.
+#
+#  Driven by env vars (set in scripts/mola-map.sh, but overridable):
+#    MOLA_INPUT_ROSBAG2          : path to the .mcap or split-bag dir
+#    MOLA_LIDAR_TOPIC            : LiDAR PointCloud2 topic
+#    MOLA_ODOMETRY_TOPIC         : nav_msgs/Odometry topic (wheel odom)
+#    MOLA_TF_BASE_LINK           : robot base frame (default base_link)
+#    MOLA_STATE_ESTIMATOR        : C++ class for the state estimator
+#    MOLA_STATE_ESTIMATOR_YAML   : params YAML for the chosen estimator
+#    MOLA_ODOMETRY_PIPELINE_YAML : LO pipeline YAML
+# =============================================================================
+
+modules:
+  # --------- MolaViz (GUI) ----------------------------------------------------
+  - name: viz
+    type: ${MOLA_GUI_MODULE|mola::MolaViz}
+    verbosity_level: "${MOLA_VERBOSITY_MOLA_VIZ|INFO}"
+    params: ~
+
+  # --------- LiDAR Odometry ---------------------------------------------------
+  - name: lidar_odom
+    type: mola::LidarOdometry
+    verbosity_level: "${MOLA_VERBOSITY_MOLA_LO|INFO}"
+    raw_data_source: "dataset_input"
+    params: "${MOLA_ODOMETRY_PIPELINE_YAML|../pipelines/lidar3d-default.yaml}"
+
+  # --------- State Estimation -------------------------------------------------
+  # Default = Smoother because we want wheel-odom fusion. Override with
+  # MOLA_STATE_ESTIMATOR=mola::state_estimation_simple::StateEstimationSimple
+  # if you ever want to fall back to the simple one.
+  - name: state_estimation
+    type: "${MOLA_STATE_ESTIMATOR|mola::state_estimation_simple::StateEstimationSimple}"
+    verbosity_level: "${MOLA_VERBOSITY_MOLA_STATE_ESTIMATOR|INFO}"
+    raw_data_source: "dataset_input"
+    params: "${MOLA_STATE_ESTIMATOR_YAML|../state-estimator-params/state-estimation-simple.yaml}"
+
+  # --------- Rosbag2 input ----------------------------------------------------
+  - type: mola::Rosbag2Dataset
+    name: dataset_input
+    verbosity_level: "${MOLA_VERBOSITY_ROSBAG2|INFO}"
+    export_to_rawlog: ${MOLA_ROS2BAG_EXPORT_TO_RAWLOG_FILE|''}
+    execution_rate: 50
+    quit_mola_app_on_dataset_end: ${MOLA_QUIT_ON_DATASET_END|false}
+
+    gui_preview_sensors:
+      - raw_sensor_label: "${MOLA_LIDAR_NAME|lidar}"
+        decimation: 1
+        win_pos: 5 5 400 400
+
+    params:
+      rosbag_filename: ${MOLA_INPUT_ROSBAG2}
+      time_warp_scale: ${MOLA_TIME_WARP|1.0}
+      start_paused: ${MOLA_DATASET_START_PAUSED|false}
+
+      base_link_frame_id: "${MOLA_TF_BASE_LINK|base_link}"
+      tf_topic: "${MOLA_TF_TOPIC|/tf}"
+      tf_static_topic: "${MOLA_TF_STATIC_TOPIC|/tf_static}"
+
+      sensors:
+        # 3-D point cloud from the tilted LD06 (built by lidar3d node)
+        - topic: ${MOLA_LIDAR_TOPIC|'/lidar3d/points'}
+          type: CObservationPointCloud
+          sensorLabel: "${MOLA_LIDAR_NAME|lidar}"
+          fixed_sensor_pose: "${LIDAR_POSE_X|0} ${LIDAR_POSE_Y|0} ${LIDAR_POSE_Z|0} ${LIDAR_POSE_YAW|0} ${LIDAR_POSE_PITCH|0} ${LIDAR_POSE_ROLL|0}"
+          use_fixed_sensor_pose: ${MOLA_USE_FIXED_LIDAR_POSE|false}
+
+        # Wheel odometry (mecanum). nav_msgs/Odometry → CObservationOdometry.
+        # The Smoother fuses this as a SE(2) prior on base_link motion.
+        - topic: ${MOLA_ODOMETRY_TOPIC|''}
+          sensorLabel: ${MOLA_ODOM_SENSOR_LABEL|odom_wheels}
+          type: CObservationOdometry
+          is_optional: true

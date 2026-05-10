@@ -20,6 +20,9 @@
   <depend>slam_toolbox</depend>
   <depend>nav2_bringup</depend>
   <depend>robot_localization</depend>
+  <exec_depend>mola_lidar_odometry</exec_depend>
+  <exec_depend>mola_state_estimation_simple</exec_depend>
+  <exec_depend>mola_state_estimation_smoother</exec_depend>
 
   <depend>xacro</depend>
   <depend>robot_state_publisher</depend>

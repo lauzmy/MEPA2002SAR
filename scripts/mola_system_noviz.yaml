@@ -1,0 +1,48 @@
+# =============================================================================
+#  Headless variant of mola_system.yaml (no MolaViz module)
+# -----------------------------------------------------------------------------
+#  Use this when --noviz is passed to mola-map.sh, to isolate whether a crash
+#  is happening in the GUI render path or in the LO/state-estimation pipeline.
+#  Identical to mola_system.yaml minus the `viz` module.
+# =============================================================================
+
+modules:
+  - name: lidar_odom
+    type: mola::LidarOdometry
+    verbosity_level: "${MOLA_VERBOSITY_MOLA_LO|INFO}"
+    raw_data_source: "dataset_input"
+    params: "${MOLA_ODOMETRY_PIPELINE_YAML|../pipelines/lidar3d-default.yaml}"
+
+  - name: state_estimation
+    type: "${MOLA_STATE_ESTIMATOR|mola::state_estimation_simple::StateEstimationSimple}"
+    verbosity_level: "${MOLA_VERBOSITY_MOLA_STATE_ESTIMATOR|INFO}"
+    raw_data_source: "dataset_input"
+    params: "${MOLA_STATE_ESTIMATOR_YAML|../state-estimator-params/state-estimation-simple.yaml}"
+
+  - type: mola::Rosbag2Dataset
+    name: dataset_input
+    verbosity_level: "${MOLA_VERBOSITY_ROSBAG2|INFO}"
+    export_to_rawlog: ${MOLA_ROS2BAG_EXPORT_TO_RAWLOG_FILE|''}
+    execution_rate: 50
+    quit_mola_app_on_dataset_end: ${MOLA_QUIT_ON_DATASET_END|true}
+
+    params:
+      rosbag_filename: ${MOLA_INPUT_ROSBAG2}
+      time_warp_scale: ${MOLA_TIME_WARP|1.0}
+      start_paused: ${MOLA_DATASET_START_PAUSED|false}
+
+      base_link_frame_id: "${MOLA_TF_BASE_LINK|base_link}"
+      tf_topic: "${MOLA_TF_TOPIC|/tf}"
+      tf_static_topic: "${MOLA_TF_STATIC_TOPIC|/tf_static}"
+
+      sensors:
+        - topic: ${MOLA_LIDAR_TOPIC|'/lidar3d/points'}
+          type: CObservationPointCloud
+          sensorLabel: "${MOLA_LIDAR_NAME|lidar}"
+          fixed_sensor_pose: "${LIDAR_POSE_X|0} ${LIDAR_POSE_Y|0} ${LIDAR_POSE_Z|0} ${LIDAR_POSE_YAW|0} ${LIDAR_POSE_PITCH|0} ${LIDAR_POSE_ROLL|0}"
+          use_fixed_sensor_pose: ${MOLA_USE_FIXED_LIDAR_POSE|false}
+
+        - topic: ${MOLA_ODOMETRY_TOPIC|''}
+          sensorLabel: ${MOLA_ODOM_SENSOR_LABEL|odom_wheels}
+          type: CObservationOdometry
+          is_optional: true

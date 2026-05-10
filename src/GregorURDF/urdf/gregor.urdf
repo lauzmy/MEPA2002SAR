@@ -549,6 +549,19 @@
             <always_on>true</always_on>
             <update_rate>100</update_rate>
             <topic>/imu</topic>
+            <!-- Force the published Imu msg's frame_id to a name that
+                 actually exists in the TF tree (the URDF link `imu_link`,
+                 broadcast by robot_state_publisher via the
+                 base_link → upper_level_link → imu_link chain).
+                 Without this, gz-sim auto-generates the long scoped name
+                 "gregor/imu_link/imu_sensor", which has NO corresponding
+                 TF, so MOLA's `imu_gravity_correction` cannot rotate the
+                 measured gravity vector into base_link and falls back to
+                 assuming an identity sensor pose. The result is that
+                 gravity is reported in `imu_link` axes (yawed -90°
+                 relative to base_link) — MOLA then re-levels the local
+                 map every cycle and the cloud "tilts" with each turn. -->
+            <gz_frame_id>imu_link</gz_frame_id>
             <imu>
                 <angular_velocity>
                     <x><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></x>
@@ -595,6 +608,13 @@
                     <max>12.0</max>
                     <resolution>0.01</resolution>
                 </range>
+                <!-- Tiny gaussian noise so synthetic walls don't yield
+                     perfectly coplanar returns (which collapse GICP
+                     normals in MOLA-LO's voxel grid). -->
+                <noise type="gaussian">
+                    <mean>0.0</mean>
+                    <stddev>0.01</stddev>
+                </noise>
             </lidar>
         </sensor>
     </gazebo>
@@ -636,9 +656,13 @@
                 name="gz::sim::systems::JointPositionController">
             <joint_name>Upper-Level_Revolute-3</joint_name>
             <topic>/lidar_cmd_pos</topic>
-            <p_gain>10.0</p_gain>
-            <i_gain>0.1</i_gain>
-            <d_gain>0.1</d_gain>
+            <!-- Tuned for the lidar mount's tiny inertia at a 4 s
+                 triangle reference: stiff P, no integrator (the reference
+                 already covers the steady-state range), modest D for
+                 damping. Old (10/0.1/0.1) lagged badly and oscillated. -->
+            <p_gain>80.0</p_gain>
+            <i_gain>0.0</i_gain>
+            <d_gain>2.0</d_gain>
         </plugin>
     </gazebo>
 </robot>

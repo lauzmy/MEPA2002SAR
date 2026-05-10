@@ -1,0 +1,56 @@
+# =============================================================================
+#  StateEstimationSimple params for MEPA2002SAR (mecanum) — tight planar prior
+# -----------------------------------------------------------------------------
+#  Override of /opt/ros/jazzy/share/mola_lidar_odometry/state-estimator-params/
+#  state-estimation-simple.yaml with:
+#    - enforce_planar_motion ON by default (flat indoor floor)
+#    - much smaller angular-acceleration random walk (we DO have a chassis-flat
+#      wheel odom prior; let it dominate over noisy ICP rotations that would
+#      otherwise tilt the cloud and slope vertical walls).
+#    - smaller relative-pose sigmas so the estimator trusts wheel odom more.
+# =============================================================================
+
+params:
+  max_time_to_use_velocity_model: ${MOLA_MAX_TIME_TO_USE_VELOCITY_MODEL|0.75}  # [s]
+
+  # Process noise on the velocity model. Indoor mecanum at <0.5 m/s — very
+  # low expected acceleration, so keep these tight.
+  #
+  # angular: 1.0 → 0.25 rad/s². The robot physically tops out around
+  # 1 rad/s²; 1.0 was permissive enough that the estimator would happily
+  # absorb a bogus ICP rotation as a real angular transient instead of
+  # rejecting it as noise, which is one of the root causes of the
+  # "rotates in multiple axes" symptom on turns. 0.25 still allows real
+  # cornering without saturating the prior.
+  sigma_random_walk_acceleration_linear:  ${MOLA_NAVSTATE_SIGMA_RANDOM_WALK_LINACC|0.5}    # [m/s²]
+  sigma_random_walk_acceleration_angular: ${MOLA_NAVSTATE_SIGMA_RANDOM_WALK_ANGACC|0.25}   # [rad/s²]
+
+  # Relative-pose noise between consecutive observations.
+  #
+  # Linear stays loose (0.20 m) because mecanum lateral slip can shift
+  # the EKF's x/y prior by several cm between scans and we want ICP to
+  # win that fight.
+  #
+  # Angular tightened from upstream's 0.10 rad (5.7°) to 0.06 rad
+  # (~3.4°). We previously went all the way to 0.025 rad (~1.4°) to
+  # kill the "map twists during turns" symptom, but that turned out to
+  # be too aggressive: ICP was no longer allowed to publish yaw
+  # corrections >1.4° per scan, so any wheel slip on rotations
+  # accumulated as permanent localization drift in `map`. 0.06 rad
+  # gives ICP enough authority to correct mecanum yaw slip while still
+  # being tight enough that the wheel/IMU consensus dominates when ICP
+  # is degenerate (sparse tilted ring during fast rotation). The map
+  # itself stays clean because gravity correction + planar enforcement
+  # constrain roll/pitch independently of this knob.
+  sigma_relative_pose_linear:  ${MOLA_NAVSTATE_SIGMA_REL_POSE_LIN|0.20}   # [m]
+  sigma_relative_pose_angular: ${MOLA_NAVSTATE_SIGMA_REL_POSE_ANG|0.06}   # [rad]
+
+  sigma_imu_angular_velocity: 0.05  # [rad/s] (unused — no IMU)
+
+  initial_twist: ["${MOLA_INITIAL_VX|0.0}", 0.0, 0.0, 0.0, 0.0, 0.0]
+
+  # Pin z, pitch, roll to 0. Indoor flat floor.
+  enforce_planar_motion: ${MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION|true}
+
+  # We don't publish IMU; nothing to match.
+  do_process_imu_labels: ${MOLA_NAVSTATE_IMU_SENSOR_NAME|__none__}
