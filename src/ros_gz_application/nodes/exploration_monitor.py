@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import subprocess
+from datetime import datetime
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
@@ -8,51 +9,31 @@ from visualization_msgs.msg import MarkerArray
 from slam_toolbox.srv import SaveMap, SerializePoseGraph
 
 
-# Kart fra Tailscale-IP → (ssh-bruker, ekstern mappe)
-# Oppdater med riktig bruker og mappe for hver person.
-OPERATOR_MAP = {
-    '100.104.108.87':  ('groven',  '/home/groven/code/MEPA2002SAR/maps/'),
-    '100.65.35.124':   ('lauritz', '/home/lauritz/maps/'),
-    '100.110.49.100':  ('emma',    '/home/emma/maps/'),
-    '100.125.96.77':   ('julie',   '/home/julie/maps/'),
-}
-
-
 class ExplorationMonitor(Node):
     def __init__(self):
         super().__init__('exploration_monitor')
-        self.declare_parameter('map_path', '/home/ubuntu/maps/gregor_maps')
+        # Rotmappe for alle kart-kjøringer. Hver kjøring får en undermappe
+        # med tidsstempel slik at gamle kart ikke overskrives.
+        self.declare_parameter('maps_root', '/home/ubuntu/maps')
+        self.declare_parameter('map_name', 'gregor_map')
         self.declare_parameter('idle_timeout', 25.0)
         self.declare_parameter('startup_grace', 30.0)
-        self.declare_parameter('remote_target', '')  # manuell override
+        # Sti til script som pusher kartet til git og rydder lokalt.
+        # Tom streng = ikke push, kun lagre lokalt.
+        self.declare_parameter('push_script', '/home/ubuntu/push_map.sh')
 
-        self.map_path = self.get_parameter('map_path').value
+        maps_root = self.get_parameter('maps_root').value
+        map_name = self.get_parameter('map_name').value
         self.idle_timeout = self.get_parameter('idle_timeout').value
         self.startup_grace = self.get_parameter('startup_grace').value
+        self.push_script = self.get_parameter('push_script').value
 
-        # Auto-detect IP fra SSH_CLIENT (satt av Docker via compose SSH_CLIENT: ${SSH_CLIENT:-})
-        ssh_client_env = os.environ.get('SSH_CLIENT', '').strip()
-        manual_target = self.get_parameter('remote_target').value
-
-        if manual_target:
-            self.remote_target = manual_target
-            self.get_logger().info(f'Using manual remote_target: {self.remote_target}')
-        elif ssh_client_env:
-            operator_ip = ssh_client_env.split()[0]
-            if operator_ip in OPERATOR_MAP:
-                user, path = OPERATOR_MAP[operator_ip]
-                self.remote_target = f'{user}@{operator_ip}:{path}'
-                self.get_logger().info(f'Auto-detected operator: {self.remote_target}')
-            else:
-                self.remote_target = ''
-                self.get_logger().warn(
-                    f'Unknown operator IP {operator_ip} — map will only be saved locally.')
-        else:
-            self.remote_target = ''
-            self.get_logger().warn(
-                'No SSH_CLIENT env and no remote_target set — map will only be saved locally.')
-
-        os.makedirs(os.path.dirname(self.map_path), exist_ok=True)
+        # Lag undermappe med dato og tid: <maps_root>/YYYY-MM-DD_HHMMSS/
+        self.run_stamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+        self.run_dir = os.path.join(maps_root, self.run_stamp)
+        os.makedirs(self.run_dir, exist_ok=True)
+        # slam_toolbox lagrer som <map_path>.{pgm,yaml,posegraph,data}
+        self.map_path = os.path.join(self.run_dir, map_name)
 
         self.last_frontier_time = None
         self.start_time = self.get_clock().now()
@@ -69,7 +50,7 @@ class ExplorationMonitor(Node):
 
         self.create_timer(1.0, self._tick)
         self.get_logger().info(
-            f'Exploration monitor started. map_path={self.map_path}, '
+            f'Exploration monitor started. run_dir={self.run_dir}, '
             f'idle_timeout={self.idle_timeout}s, startup_grace={self.startup_grace}s')
 
     def _on_frontiers(self, msg: MarkerArray):
@@ -118,16 +99,20 @@ class ExplorationMonitor(Node):
 
         self.finished_pub.publish(Bool(data=True))
 
-        if self.remote_target:
-            for ext in ('yaml', 'pgm', 'data', 'posegraph'):
-                src = f'{self.map_path}.{ext}'
-                if os.path.exists(src):
-                    subprocess.Popen(
-                        ['scp', '-o', 'StrictHostKeyChecking=no', src, self.remote_target],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-            self.get_logger().info(f'Sending map files to {self.remote_target}')
+        # Kjør push-script: kopierer kjøre-mappen til maps-branch worktree,
+        # commiter, pusher og rydder lokalt på Pi-en.
+        if self.push_script and os.path.exists(self.push_script):
+            self.get_logger().info(
+                f'Running push script: {self.push_script} {self.run_dir}')
+            subprocess.Popen(
+                [self.push_script, self.run_dir],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            self.get_logger().warn(
+                f'push_script "{self.push_script}" not found — '
+                f'map kept locally only.')
 
 
 def main():
