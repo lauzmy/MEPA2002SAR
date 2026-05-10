@@ -189,7 +189,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': False,
-            'map_path': '/maps/gregor_map',
+            'map_path': '/home/ubuntu/maps/gregor_maps',
             'idle_timeout': 15.0,
             'startup_grace': 30.0,
         }],
