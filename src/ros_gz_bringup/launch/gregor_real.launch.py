@@ -2,12 +2,15 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import TimerAction, LogInfo
+from launch.actions import RegisterEventHandler, ExecuteProcess
+from launch.event_handlers import OnProcessExit
+
 
 
 def generate_launch_description():
@@ -179,6 +182,19 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('explore')),
     )
 
+    exploration_monitor = Node(
+        package='ros_gz_application',
+        executable='exploration_monitor',
+        name='exploration_monitor',
+        output='screen',
+        parameters=[{
+            'use_sim_time': False,
+            'map_path': '/maps/gregor_map',
+            'idle_timeout': 25.0,
+            'startup_grace': 30.0,
+        }],
+    ) 
+
     rviz = Node(
         package='rviz2',
         executable='rviz2',
@@ -209,10 +225,12 @@ def generate_launch_description():
         ldlidar_node,
         thermal_Reading,
         thermal_processor,
+        camera_node,
         collision_avoidance,
         ekf_node,
         slam,
         nav2,
         explore,
+        exploration_monitor,
         ready_message,
     ])
