@@ -47,7 +47,10 @@ modules:
     verbosity_level: "${MOLA_VERBOSITY_ROSBAG2|INFO}"
     export_to_rawlog: ${MOLA_ROS2BAG_EXPORT_TO_RAWLOG_FILE|''}
     execution_rate: 50
-    quit_mola_app_on_dataset_end: ${MOLA_QUIT_ON_DATASET_END|false}
+    # Exit automatically when the bag ends so the simplemap_output file is
+    # flushed/written. Override with MOLA_QUIT_ON_DATASET_END=false to keep
+    # the GUI open for manual interaction after the bag finishes.
+    quit_mola_app_on_dataset_end: ${MOLA_QUIT_ON_DATASET_END|true}
 
     gui_preview_sensors:
       - raw_sensor_label: "${MOLA_LIDAR_NAME|lidar}"

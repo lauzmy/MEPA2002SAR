@@ -4,7 +4,7 @@
 # Set sim: true to launch with Gazebo instead of real hardware.
 _launch_settings:
   ros__parameters:
-    sim: true
+    sim: false
 
 ldlidar:
   ros__parameters:

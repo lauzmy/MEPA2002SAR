@@ -16,14 +16,20 @@ ekf_filter_node:
     base_link_frame: base_footprint
     world_frame: odom
 
-    # Wheel Odometry 
+    # Wheel Odometry
     odom0: /wheel/odometry
     odom0_config: [false, false, false,  # X, Y, Z - Absolutt posisjon i meter
                    false, false, false,  # Roll, Pitch, Yaw - Absolutt kompassvinkel
                    true,  true,  false,  # Vx, Vy, Vz - Hastighet forover/bakover og sidelengs i m/s
-                   false, false, false,  # Vroll, Vpitch, Vyaw - Rotasjonshastighet
-                   false,  false, false]  # Ax, Ay, Az - Lineær akselerasjon
+                   false, false, true,   # Vroll, Vpitch, Vyaw - encoder-derived yaw rate (mecanum)
+                   false, false, false]  # Ax, Ay, Az - Lineær akselerasjon
+    # Vyaw from encoders: on a mecanum platform the kinematic model
+    # computes yaw rate from the four wheel speeds. It is an independent
+    # measurement from the IMU gyro and matches sim (which also fuses
+    # Vyaw from the MecanumDrive plugin). Fusing both tightens the yaw
+    # rate estimate and gives the EKF a cross-check against gyro drift.
     odom0_differential: false
+    odom0_twist_rejection_threshold: 2.0  # m/s or rad/s — rejects wheel slip spikes
 
     # IMU Data
     imu0: /imu/data
@@ -46,3 +52,4 @@ ekf_filter_node:
     # above), keep this on so a future config that enables ax/ay/az
     # doesn't silently drift the EKF by 9.81 m/s².
     imu0_remove_gravitational_acceleration: true
+    imu0_twist_rejection_threshold: 5.0   # rad/s — rejects IMU jolt spikes

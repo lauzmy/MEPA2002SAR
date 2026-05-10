@@ -152,8 +152,38 @@ if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ]; then
     fi
 fi
 
+# ---- auto-save simplemap output path (derived from bag name by default) ----
+# The simplemap is written when MOLA quits at dataset end.
+# Override with MOLA_SIMPLEMAP_OUTPUT=/some/path.simplemap, or set to ''
+# to disable auto-save (requires manual GUI save instead).
+if [ -z "${MOLA_SIMPLEMAP_OUTPUT+x}" ]; then
+    BAG_NAME="$(basename -- "$BAG")"
+    export MOLA_SIMPLEMAP_OUTPUT="$(dirname -- "$BAG")/${BAG_NAME%.mcap}.simplemap"
+fi
+
+# Compute expected replay duration from metadata.yaml (if present)
+BAG_DURATION_SEC=""
+META_YAML=""
+if [ -d "$BAG" ]; then
+    META_YAML="$BAG/metadata.yaml"
+elif [ -f "${BAG%.mcap}/../metadata.yaml" ]; then
+    META_YAML="$(dirname "$BAG")/metadata.yaml"
+fi
+if [ -n "$META_YAML" ] && [ -f "$META_YAML" ]; then
+    # Extract nanoseconds field from the scalar under `duration:`
+    BAG_NS=$(grep -A1 '^ *duration:' "$META_YAML" | grep 'nanoseconds:' | head -1 | awk '{print $2}' || true)
+    if [ -n "$BAG_NS" ] && [ "$BAG_NS" -gt 0 ] 2>/dev/null; then
+        TIME_WARP="${MOLA_TIME_WARP:-1.0}"
+        # Use awk for floating-point division
+        BAG_DURATION_SEC=$(awk -v ns="$BAG_NS" -v tw="$TIME_WARP" 'BEGIN{printf "%.1f", ns/1e9/tw}')
+    fi
+fi
+
 # ---- topic / behaviour env vars (all overridable) ---------------------------
 export MOLA_INPUT_ROSBAG2="$BAG"
+# Enable simplemap generation (pipeline default is false — without this flag,
+# MOLA builds local-map keyframes but writes zero simplemap keyframes).
+export MOLA_GENERATE_SIMPLEMAP="${MOLA_GENERATE_SIMPLEMAP:-true}"
 export MOLA_LIDAR_TOPIC="${MOLA_LIDAR_TOPIC:-/lidar3d/points}"
 # Prefer the EKF-fused odometry over the raw wheel odom: in sim, EKF
 # combines MecanumDrive twist with the gyro yaw rate, smoothing any
@@ -188,6 +218,51 @@ export MOLA_IMU_GRAVITY_CORRECTION="${MOLA_IMU_GRAVITY_CORRECTION:-false}"
 # cloud. Drop it to 0.5 m so close-range features survive.
 export MOLA_ABS_MIN_SENSOR_RANGE="${MOLA_ABS_MIN_SENSOR_RANGE:-0.5}"
 
+# ---- tuning for sparse single-LD06 indoor mapping ---------------------------
+#
+# Context: /lidar3d/points at ~1.7 Hz, x/y/z only (no intensity), indoor,
+# planar motion enforced. Bag 3d_mapping_20260510_153453 produced only 19
+# simplemap keyframes over 2m52s in a ~4m corridor — way too sparse.
+#
+# ESTIMATED_SENSOR_MAX_RANGE ≈ 12 m for LD06.
+#
+# ICP point counts:
+#   Default decimated_for_map = 10000 pts, decimated_for_icp = 3000 pts.
+#   Our sparse cloud rarely exceeds a few hundred pts after range filtering,
+#   so the adaptive decimator already passes everything through. No change needed.
+#
+# Simplemap keyframe spacing:
+#   Default: (1.0e-2 + sqrt(wx²+wy²+wz²)*1.0)*12 m ≈ 0.12 m translation,
+#            15 + angular_vel*500 deg ≈ 15 deg rotation.
+#   For dense indoor coverage we want a keyframe every ~0.3 m / 10 deg.
+export MOLA_SIMPLEMAP_MIN_XYZ="${MOLA_SIMPLEMAP_MIN_XYZ:-0.30}"   # m — one KF per ~30 cm
+export MOLA_SIMPLEMAP_MIN_ROT="${MOLA_SIMPLEMAP_MIN_ROT:-10}"      # deg — one KF per ~10°
+
+# Local-map keyframe spacing (affects ICP quality, not simplemap directly):
+#   Default expression at zero angular rate ≈ 0.012 m — keeps almost every scan,
+#   which is fine for a slow robot but wastes memory with long bags. Keep default.
+# export MOLA_MIN_XYZ_BETWEEN_MAP_UPDATES=...
+
+# ICP minimum quality threshold:
+#   Default 0.50. With our sparse cloud and flat corridors, ICP can produce
+#   low-quality matches without outright failing. Tighten to reject bad matches
+#   before they corrupt the trajectory, but not so tight we drop valid scans.
+export MOLA_MINIMUM_ICP_QUALITY="${MOLA_MINIMUM_ICP_QUALITY:-0.40}"
+
+# Voxel size for map decimation:
+#   Default 0.15 m — fine for dense outdoor LiDARs but wastes resolution on
+#   our already-sparse indoor cloud. Reduce to keep more geometric detail.
+export MOLA_CLOUD_DECIMATION_VOXEL_SIZE="${MOLA_CLOUD_DECIMATION_VOXEL_SIZE:-0.08}"
+
+# Local map retention radius:
+#   Default max(100, 1.5*12) = 100 m — keeps the entire map in memory.
+#   Fine for short indoor sessions; leave at default.
+# export MOLA_LOCAL_MAP_MAX_SIZE=...
+
+# Log ICP debug files for any match below 0.45 quality so we can inspect
+# failures without drowning in logs.
+export MOLA_WRITE_DEBUG_ICP_LOG_IF_QUALITY_UNDER="${MOLA_WRITE_DEBUG_ICP_LOG_IF_QUALITY_UNDER:-0.45}"
+
 cat <<EOF
 [mola-map] Bag                      : $BAG
 [mola-map] System YAML              : $SYSTEM_YAML
@@ -199,7 +274,26 @@ cat <<EOF
 [mola-map] base_link tf frame       : $MOLA_TF_BASE_LINK
 [mola-map] Kinematic model          : $MOLA_NAVSTATE_KINEMATIC_MODEL
 [mola-map] Enforce planar motion    : $MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION
+[mola-map] Generate simplemap        : $MOLA_GENERATE_SIMPLEMAP
+[mola-map] SimpleMap output         : ${MOLA_SIMPLEMAP_OUTPUT:-<auto-save disabled>}
+[mola-map] Bag replay duration      : ${BAG_DURATION_SEC:+~${BAG_DURATION_SEC}s (at ${MOLA_TIME_WARP:-1.0}x)}${BAG_DURATION_SEC:-unknown}
+[mola-map] --- tuning ---
+[mola-map] SM keyframe min XYZ      : $MOLA_SIMPLEMAP_MIN_XYZ m
+[mola-map] SM keyframe min rot      : $MOLA_SIMPLEMAP_MIN_ROT deg
+[mola-map] ICP min quality          : $MOLA_MINIMUM_ICP_QUALITY
+[mola-map] Voxel size               : $MOLA_CLOUD_DECIMATION_VOXEL_SIZE m
+[mola-map] ICP debug log below      : $MOLA_WRITE_DEBUG_ICP_LOG_IF_QUALITY_UNDER
 
 EOF
+
+if [ "${MOLA_GENERATE_SIMPLEMAP:-true}" != "true" ]; then
+    echo "[mola-map] WARNING: MOLA_GENERATE_SIMPLEMAP is not true — simplemap will NOT be built." >&2
+    echo >&2
+elif [ -z "${MOLA_SIMPLEMAP_OUTPUT:-}" ]; then
+    echo "[mola-map] WARNING: MOLA_SIMPLEMAP_OUTPUT is empty — auto-save is DISABLED." >&2
+    echo "[mola-map]          You must press 'Save Simple Map' in the GUI AFTER the bag" >&2
+    echo "[mola-map]          finishes replaying (wait for the progress to stop)." >&2
+    echo >&2
+fi
 
 exec mola-cli "$SYSTEM_YAML" "$@"
