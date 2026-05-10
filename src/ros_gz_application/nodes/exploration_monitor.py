@@ -24,7 +24,7 @@ class ExplorationMonitor(Node):
         self.declare_parameter('map_path', '/maps/gregor_maps')
         self.declare_parameter('idle_timeout', 25.0)
         self.declare_parameter('startup_grace', 30.0)
-        self.declare_parameter('remote_target', '')  # manuell override
+        self.declare_parameter('remote_target', '/home/ubuntu/maps/gregor_maps')  # manuell override
 
         self.map_path = self.get_parameter('map_path').value
         self.idle_timeout = self.get_parameter('idle_timeout').value
