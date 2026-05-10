@@ -50,6 +50,15 @@ def generate_launch_description():
                     'EKF and record a bag for offline processing.')
     enable_mola = LaunchConfiguration('enable_mola')
 
+    # Bag recording is on by default in sim (kept inside the sim branch
+    # for backwards compatibility) and exposed as a launch arg on real
+    # hardware so a teleop-only debug session can skip the recorder.
+    record_bag_arg = DeclareLaunchArgument(
+        'record_bag', default_value='false',
+        description='If true (real-robot mode), record a rosbag with all '
+                    'topics needed for offline mola-map.sh.')
+    record_bag = LaunchConfiguration('record_bag')
+
     config_file = os.path.join(pkg_bringup, 'config', 'IRL', '3d_mapping.yaml')
     urdf_file   = os.path.join(pkg_description, 'urdf', 'gregor.urdf')
 
@@ -348,6 +357,39 @@ def generate_launch_description():
         nodes += [joint_state_publisher, ldlidar, lidar3d, allocator,
                   imu_node, ekf_node]
 
+        # Bag recorder (real robot). Captures everything the offline
+        # `scripts/mola-map.sh` needs to rebuild the map after the run:
+        #   /lidar3d/points  — 3D cloud assembled by lidar3d
+        #   /wheel/odometry  — raw mecanum odometry from allocator
+        #   /odometry/filtered — EKF output (MOLA's motion prior)
+        #   /imu/data        — BNO085 (50 Hz, frame_id=imu_link)
+        #   /tf + /tf_static — sensor poses (RSP + JSP + EKF)
+        # `--include-hidden-topics` is required so /tf_static (transient
+        # local) is captured; without it rosbag2's late subscription
+        # routinely misses it.
+        bag_output = os.path.join(
+            os.path.expanduser('~'),
+            'ros2_ws',
+            'rosbags',
+            datetime.now().strftime('3d_mapping_%Y%m%d_%H%M%S'),
+        )
+        rosbag_record = ExecuteProcess(
+            cmd=[
+                'ros2', 'bag', 'record',
+                '--include-hidden-topics',
+                '-o', bag_output,
+                '/lidar3d/points',
+                '/wheel/odometry',
+                '/odometry/filtered',
+                '/imu/data',
+                '/tf',
+                '/tf_static',
+            ],
+            output='screen',
+            condition=IfCondition(record_bag),
+        )
+        nodes.append(rosbag_record)
+
         # MOLA-LO live (real robot). Now mirrors the sim branch: feed the
         # EKF-fused /odometry/filtered as motion prior, and the BNO085's
         # /imu/data as gravity source for ICP roll/pitch correction.
@@ -375,4 +417,4 @@ def generate_launch_description():
         # branch's expanded window (was 3 s) — see comment there.
         nodes.append(TimerAction(period=8.0, actions=[mola_lo]))
 
-    return LaunchDescription([enable_mola_arg] + nodes)
+    return LaunchDescription([enable_mola_arg, record_bag_arg] + nodes)
