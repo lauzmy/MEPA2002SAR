@@ -57,4 +57,10 @@ install(PROGRAMS
 	RENAME collision_avoidance
 )
 
+install(PROGRAMS
+    nodes/exploration_monitor.py
+    DESTINATION lib/${PROJECT_NAME}
+    RENAME exploration_monitor
+)
+
 ament_package()

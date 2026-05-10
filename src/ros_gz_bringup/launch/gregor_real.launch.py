@@ -190,7 +190,7 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': False,
             'map_path': '/maps/gregor_map',
-            'idle_timeout': 25.0,
+            'idle_timeout': 15.0,
             'startup_grace': 30.0,
         }],
     ) 
@@ -225,11 +225,11 @@ def generate_launch_description():
         ldlidar_node,
         thermal_Reading,
         thermal_processor,
-        camera_node,
         collision_avoidance,
         ekf_node,
         slam,
         nav2,
         explore,
+        exploration_monitor,
         ready_message,
     ])
