@@ -41,6 +41,7 @@ class ThermalReading(Node):
             return
 
         raw = self.to_mono16(frame)
+        raw = self.crop_top(raw)
         stamp = self.get_clock().now().to_msg()
 
         raw_msg = self.bridge.cv2_to_imgmsg(raw, encoding='mono16')
@@ -60,6 +61,12 @@ class ThermalReading(Node):
             return frame[:, :, 0].astype(np.uint16) | (frame[:, :, 1].astype(np.uint16) << 8)
 
         raise ValueError(f'Unsupported frame format: shape={frame.shape}, dtype={frame.dtype}')
+    
+    def crop_top(self, img):
+        h = img.shape[0]
+        top_cut = int(h * 0.4)
+        return img[top_cut:, :]
+
 
     def destroy_node(self):
         if self.cap is not None:
@@ -70,11 +77,9 @@ class ThermalReading(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ThermalReading()
-    try:
-        rclpy.spin(node)
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':
