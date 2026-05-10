@@ -37,6 +37,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-mola-state-estimation \
     ros-jazzy-mola-lidar-odometry \
     ros-jazzy-octomap-server \
+    gstreamer1.0-tools \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-libav \
+    v4l-utils \
  && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x adafruit-extended-bus rpi-lgpio rpi_hardware_pwm ultralytics
