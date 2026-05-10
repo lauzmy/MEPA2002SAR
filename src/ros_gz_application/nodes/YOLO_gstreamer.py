@@ -18,7 +18,7 @@ class YoloGstreamerNode(Node):
 
         # Oppsett av parametere
         self.declare_parameter("model_path", default_pt_model)
-        self.declare_parameter("class_ids", [0])
+        self.declare_parameter("class_ids", [77])
         self.declare_parameter("conf", 0.25)
         self.declare_parameter("imgsz", 640)
         self.declare_parameter("fps_limit", 0.0)
