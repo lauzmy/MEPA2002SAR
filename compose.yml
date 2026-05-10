@@ -23,6 +23,8 @@ services:
       - /dev:/dev
       - /sys/class/pwm:/sys/class/pwm
       - /sys/devices:/sys/devices
+      - /home/pi/ros2_ws/push_map.sh:/home/ubuntu/push_map.sh:ro
+      - /home/pi/.gitconfig:/home/ubuntu/.gitconfig:ro
       
     devices:
       - /dev/gpiochip0

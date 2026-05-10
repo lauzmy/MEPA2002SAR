@@ -189,7 +189,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': False,
-            'maps_root': '/home/ubuntu/maps',
+            'maps_root': '/home/ubuntu/ros2_ws/maps',
             'map_name': 'gregor_map',
             'idle_timeout': 15.0,
             'startup_grace': 30.0,
