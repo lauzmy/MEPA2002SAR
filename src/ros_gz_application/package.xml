@@ -24,7 +24,7 @@
   <exec_depend>python3-cv2</exec_depend>
   <exec_depend>python3-libgpiod</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
-  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-numpy<2</exec_depend>
   <exec_depend>python3-rpi-hardware-pwm</exec_depend>
   <exec_depend>python3-serial</exec_depend>
   <exec_depend>slam_toolbox</exec_depend>

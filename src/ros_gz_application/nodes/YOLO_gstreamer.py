@@ -2,12 +2,12 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 from ultralytics import YOLO
 import cv2
 import os
 import threading
 import time
+import numpy as np
 from ament_index_python.packages import get_package_share_directory
 
 class YoloGstreamerNode(Node):
@@ -35,21 +35,10 @@ class YoloGstreamerNode(Node):
         self.fps_limit = float(self.get_parameter("fps_limit").value)
         self.pipeline = self.get_parameter("gstreamer_pipeline").value
 
-        # NCNN Eksport-logikk
-        if model_path.endswith('.pt'):
-            ncnn_model_dir = model_path.replace('.pt', '_ncnn_model')
-            if not os.path.exists(ncnn_model_dir):
-                self.get_logger().info(f"Eksporterer {model_path} til NCNN...")
-                temp_model = YOLO(model_path, task="detect")
-                temp_model.export(format="ncnn")
-                self.get_logger().info(f"Eksport ferdig! Lagret i {ncnn_model_dir}")
-            model_path = ncnn_model_dir
-
         self.get_logger().info(f"Laster modell fra: {model_path}")
         self.model = YOLO(model_path, task="detect")
-        self.bridge = CvBridge()
         
-        # Vi publiserer fremdeles debug-bildet til ROS hvis ønskelig
+        # Setter opp publisering manuelt for å unngå cv_bridge-krasj pga numpy versjonskonflikt
         self.pub = self.create_publisher(Image, "/yolo_coco/debug_image", 10)
 
         self.frames_processed = 0
@@ -104,9 +93,17 @@ class YoloGstreamerNode(Node):
             cv2.putText(annotated_frame, f"FPS: {self.current_fps:.1f}", (10, 30), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-            # Publiser for debug
-            out = self.bridge.cv2_to_imgmsg(annotated_frame, encoding="bgr8")
+            # Publiser for debug (uten cv_bridge for å unngå cv_bridge numpy-krasj)
+            out = Image()
             out.header.stamp = self.get_clock().now().to_msg()
+            out.header.frame_id = "camera_link"
+            out.height = annotated_frame.shape[0]
+            out.width = annotated_frame.shape[1]
+            out.encoding = "bgr8"
+            out.is_bigendian = False
+            out.step = 3 * annotated_frame.shape[1]
+            out.data = annotated_frame.tobytes()
+            
             self.pub.publish(out)
 
         cap.release()
