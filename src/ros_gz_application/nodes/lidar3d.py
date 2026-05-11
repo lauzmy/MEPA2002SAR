@@ -291,7 +291,7 @@ class Lidar3D(Node):
         self.declare_parameter('output_frame', 'base_link')
         # Beams shorter than this (after the LD06's own range_min) are dropped.
         # Useful to suppress points that hit the chassis on extreme tilts.
-        self.declare_parameter('min_range_m', 0.20)
+        self.declare_parameter('min_range_m', 0.10)
         # Assumed revolution period when the LaserScan driver reports
         # `time_increment == 0` (i.e. it doesn't tell us the per-beam
         # spacing). Used by `_on_scan` to spread beams uniformly across

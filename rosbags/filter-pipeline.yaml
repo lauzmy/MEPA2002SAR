@@ -4,7 +4,7 @@ filters:
     params:
       input_pointcloud_layer: 'raw'
       inside_pointcloud_layer: 'close_points'
-      bounding_box_min: [ -3, -9, 0 ]
+      bounding_box_min: [ -3, -10, 0 ]
       bounding_box_max: [ 1, 1.5, 1 ]
 
   - class_name: mp2p_icp_filters::FilterSOR
@@ -12,8 +12,8 @@ filters:
       input_pointcloud_layer: 'close_points'
       output_layer_inliers: 'filtered'
       #output_layer_outliers: 'noise'
-      mean_k: 80
-      std_dev_mul: 0.8
+      mean_k: 40
+      std_dev_mul: 2.0
       parallelization_grain_size: 1024
 
   

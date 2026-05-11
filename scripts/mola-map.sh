@@ -101,10 +101,10 @@ MOLA_LO_SHARE="$MOLA_LO_PREFIX/share/mola_lidar_odometry"
 
 if [ -z "${MOLA_ODOMETRY_PIPELINE_YAML:-}" ]; then
     # NOTE: We tried lidar3d-gicp-optimize-twist.yaml. With our slow indoor
-    # motion, sparse single-LD06 cloud, and no IMU, the twist solver had no
+    # motion and sparse single-LD06 cloud, the twist solver had no
     # observability and diverged into long radial streaks through origin
     # (see git history). The default pipeline + a tight motion-model prior
-    # from the wheel-odom-fed Simple estimator gives much better deskew.
+    # from the wheel+IMU-fed Simple estimator gives much better deskew.
     export MOLA_ODOMETRY_PIPELINE_YAML="$MOLA_LO_SHARE/pipelines/lidar3d-default.yaml"
 fi
 export MOLA_OPTIMIZE_TWIST="${MOLA_OPTIMIZE_TWIST:-false}"
@@ -203,20 +203,37 @@ export MOLA_TF_BASE_LINK="${MOLA_TF_BASE_LINK:-base_footprint}"
 #   MOLA_STATE_ESTIMATOR=mola::state_estimation_smoother::StateEstimationSmoother
 export MOLA_STATE_ESTIMATOR="${MOLA_STATE_ESTIMATOR:-mola::state_estimation_simple::StateEstimationSimple}"
 export MOLA_NAVSTATE_KINEMATIC_MODEL="${MOLA_NAVSTATE_KINEMATIC_MODEL:-KinematicModel::ConstantVelocity}"
-export MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION="${MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION:-True}"
+# IMPORTANT: must be lowercase `true`/`false` — yaml-cpp (YAML 1.2) parses
+# `True`/`False` as plain strings, which silently disables the constraint and
+# lets roll/pitch leak into the simplemap (visible as a tilted local map).
+export MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION="${MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION:-true}"
+# Tighten the relative-pose angular sigma from the YAML default of 0.06 rad
+# (~3.4°) to 0.03 rad (~1.7°). This belt-and-braces with enforce_planar_motion:
+# even when ICP briefly publishes a tilted transform between estimator updates
+# (sparse single-LD06 ring + flat corridor = poor roll/pitch observability),
+# the estimator now down-weights it enough that it can't pitch the local map.
+# Note: this knob is isotropic across roll/pitch/yaw, so it also constrains
+# yaw — relax via MOLA_NAVSTATE_SIGMA_REL_POSE_ANG=... if cornering drifts.
+export MOLA_NAVSTATE_SIGMA_REL_POSE_ANG="${MOLA_NAVSTATE_SIGMA_REL_POSE_ANG:-0.03}"
 
-# ---- pipeline tweaks for our (no-IMU, no-intensity) LD06 build --------------
+# ---- pipeline tweaks for our (no-intensity) LD06 build ----------------------
 # Our /lidar3d/points cloud has only x,y,z (no intensity field). The bundled
 # lidar3d-default.yaml tries to colour the GUI cloud by `intensity`, which
 # segfaults on the first viz update. Use `z` instead.
 export MOLA_GUI_CURRENT_CLOUD_COLOR_FIELD="${MOLA_GUI_CURRENT_CLOUD_COLOR_FIELD:-z}"
 export MOLA_GUI_LAST_CLOUDS_COLOR_FIELD="${MOLA_GUI_LAST_CLOUDS_COLOR_FIELD:-z}"
-# We have no IMU, so disable gravity correction (would otherwise log warnings
-# every frame and may interfere with smoother priors).
+
+# IMU: the robot has a BNO055 publishing sensor_msgs/Imu on /imu/data, and the
+# bags include it. We deliberately do NOT register it as a MOLA sensor (see
+# mola_system.yaml) — the wheel/EKF odometry alone gives better results here.
+# The estimator and gravity-correction knobs are forced off as belt-and-braces.
+# To re-enable, add the CObservationIMU entry back in mola_system.yaml and set:
+#   MOLA_NAVSTATE_IMU_SENSOR_NAME=imu MOLA_IMU_GRAVITY_CORRECTION=true ./mola-map.sh ...
+export MOLA_NAVSTATE_IMU_SENSOR_NAME="${MOLA_NAVSTATE_IMU_SENSOR_NAME:-__none__}"
 export MOLA_IMU_GRAVITY_CORRECTION="${MOLA_IMU_GRAVITY_CORRECTION:-false}"
 # LD06 indoor range is ~0.1–12 m; the upstream default of 5 m would gut our
 # cloud. Drop it to 0.5 m so close-range features survive.
-export MOLA_ABS_MIN_SENSOR_RANGE="${MOLA_ABS_MIN_SENSOR_RANGE:-0.5}"
+export MOLA_ABS_MIN_SENSOR_RANGE="${MOLA_ABS_MIN_SENSOR_RANGE:-0.2}"
 
 # ---- tuning for sparse single-LD06 indoor mapping ---------------------------
 #
@@ -235,8 +252,8 @@ export MOLA_ABS_MIN_SENSOR_RANGE="${MOLA_ABS_MIN_SENSOR_RANGE:-0.5}"
 #   Default: (1.0e-2 + sqrt(wx²+wy²+wz²)*1.0)*12 m ≈ 0.12 m translation,
 #            15 + angular_vel*500 deg ≈ 15 deg rotation.
 #   For dense indoor coverage we want a keyframe every ~0.3 m / 10 deg.
-export MOLA_SIMPLEMAP_MIN_XYZ="${MOLA_SIMPLEMAP_MIN_XYZ:-0.30}"   # m — one KF per ~30 cm
-export MOLA_SIMPLEMAP_MIN_ROT="${MOLA_SIMPLEMAP_MIN_ROT:-10}"      # deg — one KF per ~10°
+export MOLA_SIMPLEMAP_MIN_XYZ="${MOLA_SIMPLEMAP_MIN_XYZ:-0.3}"   # m — one KF per ~30 cm
+export MOLA_SIMPLEMAP_MIN_ROT="${MOLA_SIMPLEMAP_MIN_ROT:-1}"      # deg — one KF per ~10°
 
 # Local-map keyframe spacing (affects ICP quality, not simplemap directly):
 #   Default expression at zero angular rate ≈ 0.012 m — keeps almost every scan,
@@ -271,6 +288,7 @@ cat <<EOF
 [mola-map] State estimator YAML     : ${MOLA_STATE_ESTIMATOR_YAML:-<defaults>}
 [mola-map] LIDAR topic              : $MOLA_LIDAR_TOPIC
 [mola-map] Odometry topic           : $MOLA_ODOMETRY_TOPIC
+[mola-map] IMU                       : not registered (fuse=$MOLA_NAVSTATE_IMU_SENSOR_NAME, gravity=$MOLA_IMU_GRAVITY_CORRECTION)
 [mola-map] base_link tf frame       : $MOLA_TF_BASE_LINK
 [mola-map] Kinematic model          : $MOLA_NAVSTATE_KINEMATIC_MODEL
 [mola-map] Enforce planar motion    : $MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION
