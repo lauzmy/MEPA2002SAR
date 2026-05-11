@@ -65,7 +65,14 @@ class BNO085Node(Node):
 
         self._bno = None
         self._gyro_attr = "gyro"
-        self._linear_accel_attr = "linear_acceleration"
+        # Raw accelerometer (gravity INCLUDED). This is what MOLA-LO's
+        # `imu_gravity_correction` needs to estimate the gravity vector
+        # direction and clamp ICP roll/pitch. Using
+        # BNO_REPORT_LINEAR_ACCELERATION (gravity removed) here silently
+        # disables the gravity prior — MOLA sees a ~0 accel vector when
+        # stationary, can't derive a gravity direction, and the map
+        # tilts/rotates uncontrollably during turns.
+        self._accel_attr = "acceleration"
         self._quat_attr = "game_quaternion" if self._use_game_rotation_vector else "quaternion"
 
         self._load_driver()
@@ -85,6 +92,7 @@ class BNO085Node(Node):
     def _load_driver(self) -> None:
         try:
             from adafruit_bno08x import (  # type: ignore
+                BNO_REPORT_ACCELEROMETER,
                 BNO_REPORT_GAME_ROTATION_VECTOR,
                 BNO_REPORT_GYROSCOPE,
                 BNO_REPORT_LINEAR_ACCELERATION,
@@ -110,7 +118,19 @@ class BNO085Node(Node):
 
         self._bno.enable_feature(orientation_report, self._report_interval_us)
         self._bno.enable_feature(BNO_REPORT_GYROSCOPE, self._report_interval_us)
+        # Raw accel (gravity included) — required by MOLA's gravity
+        # correction. We *also* enable LINEAR_ACCELERATION just in case
+        # diagnostics need the gravity-removed signal, but only publish
+        # the raw one (see _on_timer).
+        self._bno.enable_feature(BNO_REPORT_ACCELEROMETER, self._report_interval_us)
         self._bno.enable_feature(BNO_REPORT_LINEAR_ACCELERATION, self._report_interval_us)
+
+        if not hasattr(self._bno, self._accel_attr):
+            raise RuntimeError(
+                "BNO08x library does not expose 'acceleration' (raw accel "
+                "with gravity). MOLA gravity correction will not work "
+                "without it; upgrade adafruit-circuitpython-bno08x."
+            )
 
         if self._use_game_rotation_vector and not hasattr(self._bno, "game_quaternion"):
             self._quat_attr = "quaternion"
@@ -118,17 +138,11 @@ class BNO085Node(Node):
                 "BNO08x library does not expose game_quaternion, falling back to quaternion."
             )
 
-        if not hasattr(self._bno, self._linear_accel_attr):
-            self._linear_accel_attr = "acceleration"
-            self.get_logger().warning(
-                "BNO08x library does not expose linear_acceleration, falling back to acceleration."
-            )
-
     def _on_timer(self) -> None:
         try:
             quaternion = getattr(self._bno, self._quat_attr)
             angular_velocity = getattr(self._bno, self._gyro_attr)
-            linear_acceleration = getattr(self._bno, self._linear_accel_attr)
+            linear_acceleration = getattr(self._bno, self._accel_attr)
         except Exception as exc:  # pragma: no cover - hardware/runtime dependent
             self._consecutive_failures += 1
             if self._consecutive_failures in (1, 10) or self._consecutive_failures % 50 == 0:
