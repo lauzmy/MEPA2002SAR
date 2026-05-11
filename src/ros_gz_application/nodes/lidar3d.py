@@ -292,6 +292,15 @@ class Lidar3D(Node):
         # Beams shorter than this (after the LD06's own range_min) are dropped.
         # Useful to suppress points that hit the chassis on extreme tilts.
         self.declare_parameter('min_range_m', 0.20)
+        # Assumed revolution period when the LaserScan driver reports
+        # `time_increment == 0` (i.e. it doesn't tell us the per-beam
+        # spacing). Used by `_on_scan` to spread beams uniformly across
+        # the revolution so the per-beam tilt interpolation is correct.
+        # Default 0.1 s = LD06 nominal 10 Hz. Set to 0.0 to disable the
+        # spread (all beams stamped at scan.header.stamp, the old
+        # behaviour) — only do that if you know your driver already
+        # provides correct per-beam timing.
+        self.declare_parameter('assumed_scan_period_s', 0.1)
         # Drop projected points whose Z (in `output_frame`, i.e. base_link)
         # falls outside [min_z_m, max_z_m]. Useful to suppress sub-floor
         # artefacts caused by tilt-angle latency between /joint_states
@@ -336,6 +345,7 @@ class Lidar3D(Node):
         self._min_range = float(gp('min_range_m').value)
         self._min_z = float(gp('min_z_m').value)
         self._max_z = float(gp('max_z_m').value)
+        self._assumed_scan_period = float(gp('assumed_scan_period_s').value)
 
     # ── Hardware init ─────────────────────────────────────────────────────
     def _init_pwm(self) -> None:
@@ -546,18 +556,44 @@ class Lidar3D(Node):
         if not np.any(valid):
             return
 
-        # Per-beam timestamps. Real LD06 stamps the frame at the *end* of
-        # the revolution and reports time_increment > 0, so reconstruct
-        # beam times backwards from the header stamp. Gazebo's gpu_lidar
-        # captures the entire scan instantaneously (time_increment == 0);
-        # treat all beams as taken at scan.header.stamp in that case.
-        scan_end_s = scan.header.stamp.sec + scan.header.stamp.nanosec * 1e-9
+        # Per-beam timestamps.
+        #
+        # Three cases, in priority order:
+        #   1. Driver reports time_increment > 0 AND scan_time > 0
+        #      (current LD06 driver after the lipkg.cpp fix; also any
+        #      proper Velodyne/Ouster/Hesai driver). The header stamp
+        #      is the scan *start*, so beam i is at stamp + i*dt.
+        #   2. Driver reports time_increment > 0 but doesn't tell us
+        #      whether the stamp is start- or end-of-scan. We assume
+        #      end-of-scan (the LD06 driver's historical behaviour
+        #      before the fix) and reconstruct backwards.
+        #   3. Driver reports time_increment == 0 (Gazebo gpu_lidar,
+        #      or an unmodified upstream LD06 driver). Fall back to
+        #      the configured `assumed_scan_period_s`: spread beams
+        #      uniformly across that window ending at the header
+        #      stamp. This is what stops a tilted-sweep cloud from
+        #      stamping every beam in a 100 ms revolution at one
+        #      single tilt angle (the "ladder streaks between walls"
+        #      symptom on the real robot).
+        scan_stamp_s = scan.header.stamp.sec + scan.header.stamp.nanosec * 1e-9
         dt = float(scan.time_increment) if scan.time_increment > 0.0 else 0.0
+        scan_time = float(scan.scan_time) if scan.scan_time > 0.0 else 0.0
         beam_idx_all = np.arange(n, dtype=np.float64)
-        if dt > 0.0:
-            beam_t_all = scan_end_s - (n - 1 - beam_idx_all) * dt
+        if dt > 0.0 and scan_time > 0.0:
+            # Case 1: stamp is scan-start.
+            beam_t_all = scan_stamp_s + beam_idx_all * dt
+        elif dt > 0.0:
+            # Case 2: stamp is scan-end (legacy LD06 behaviour).
+            beam_t_all = scan_stamp_s - (n - 1 - beam_idx_all) * dt
+        elif self._assumed_scan_period > 0.0:
+            # Case 3: synthesise a uniform spread across the assumed
+            # revolution period, anchored at the header stamp as
+            # scan-end (the more conservative assumption — matches
+            # what gpu_lidar / unmodified LD06 drivers do).
+            dt_assumed = self._assumed_scan_period / max(n - 1, 1)
+            beam_t_all = scan_stamp_s - (n - 1 - beam_idx_all) * dt_assumed
         else:
-            beam_t_all = np.full(n, scan_end_s, dtype=np.float64)
+            beam_t_all = np.full(n, scan_stamp_s, dtype=np.float64)
 
         # Apply the validity mask.
         idx = beam_idx_all[valid]

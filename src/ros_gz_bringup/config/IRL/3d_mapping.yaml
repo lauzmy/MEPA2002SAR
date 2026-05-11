@@ -15,31 +15,40 @@ ldlidar:
 
 lidar3d:
   ros__parameters:
-    # Tilt sweep — narrowed to ±20° (was ±30°) so the servo can complete
-    # one full sweep in 0.5 s without exceeding ~3 rad/s. The 40° range
-    # still gives MOLA enough vertical structure to constrain
-    # roll/pitch (with `imu_gravity_correction` doing the heavy lifting,
-    # see mola_lo.launch.py), and the faster cycle halves the per-cloud
-    # body motion that MOLA-LO's ConstantVelocity prediction has to
-    # absorb between ICP steps. That was the dominant source of
-    # "rotates in multiple axes / map twists during turns".
+    # Tilt sweep — ±20° kept (40° vertical FOV is plenty given MOLA's
+    # gravity-prior + EKF motion-prior fusion, see mola_lo.launch.py).
     min_angle_deg: -20.0
     max_angle_deg:  20.0
-    # Sweep + publish window: 0.5 s. Each published cloud now spans
-    # half the body motion of the previous 1.0 s setting, giving
-    # MOLA's ICP a much better-conditioned problem during turns.
-    # Publishing rate doubles to 2 Hz.
+    # Sweep + publish window: 1.0 s (was 0.5 s).
     #
-    # If you ever push this lower than 0.4 s, double-check the servo
-    # actually keeps up (real RC servos top out around 300–400°/s; we
-    # ask for 40°/0.5 s = 80°/s here, comfortably below the limit).
-    # If the map ever looks flat / under-constrained vertically, walk
-    # the angle back up *before* lengthening the sweep.
-    sweep_period_s: 0.5    # 40° of tilt per cloud, 80°/s servo speed
+    # Why slower: each LD06 revolution physically spans ~100 ms. At a
+    # 0.5 s sweep the servo travels 8° of tilt *within* one revolution,
+    # and because the LD06 driver lies about `time_increment` (it
+    # publishes 0, see lipkg.cpp::ToLaserscan), all beams in the ring
+    # were stamped identically and got the same interpolated tilt
+    # angle. The result was visible "ladder" streaks between walls
+    # in the 3D map: each ring laid flat at one quantized tilt instead
+    # of being unwound continuously. Doubling sweep_period_s to 1.0 s
+    # halves the per-revolution tilt sweep to 4° (≈ ±2.5 cm vertical
+    # smear at 1.5 m range vs. ±10 cm before), which is small enough
+    # to be lost in LD06 range noise.
+    #
+    # We can afford the slower cadence now because:
+    #   * `forward_ros_tf_odom_to_mola=True` (mola_lo.launch.py) feeds
+    #     EKF /tf into MOLA's navstate between ICP steps, so longer
+    #     gaps between clouds no longer freeze the published pose.
+    #   * `imu_gravity_correction=True` + MOLA_IMU_GRAVITY_SIGMA_DEG=0.5
+    #     constrain ICP roll/pitch tightly, so we don't need a fast
+    #     sweep to inject vertical structure for stability.
+    #
+    # See also the per-beam timestamp fix in ros_gz_application/nodes/
+    # lidar3d.py and the matching `time_increment` / `scan_time` /
+    # header.stamp fix in src/sensors/ldlidar/src/lipkg.cpp.
+    sweep_period_s: 1.0    # 40° of tilt per cloud, 40°/s servo speed
     # Publish a merged cloud every `publish_period_s`, containing the
     # *last `sweep_period_s`* of beams. Equal to sweep_period_s →
     # consecutive clouds are disjoint (no overlap, max throughput).
-    publish_period_s: 0.5
+    publish_period_s: 1.0
     # Topics
     scan_topic: /scan
     cloud_topic: /lidar3d/points

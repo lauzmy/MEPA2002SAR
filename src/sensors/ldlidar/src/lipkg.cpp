@@ -235,14 +235,25 @@ void LiPkg::ToLaserscan(std::vector<PointData> src)
     output.angle_increment = angle_increment;
   }
 
-  output.header.stamp = clock->now();
+  // Per-beam time/scan timing. mSpeed is in deg/s (see angle_increment
+  // formula above: mSpeed/4500 deg-per-beam = mSpeed/(450*10) at 10 Hz).
+  // We anchor the header stamp to the *start* of the revolution so the
+  // downstream lidar3d node (ros_gz_application/nodes/lidar3d.py) can
+  // reconstruct per-beam times as header.stamp + i*time_increment.
+  // Previously time_increment was 0 → every beam in the ring was
+  // assigned the same tilt angle, producing visible "ladder" streaks
+  // between walls in the assembled 3D cloud.
+  double scan_time = (mSpeed > 0.0) ? (360.0 / mSpeed) : 0.0;
+  output.header.stamp = clock->now() - rclcpp::Duration::from_seconds(scan_time);
   output.header.frame_id = mLidarFrame;
   output.angle_min = angle_min;
   output.angle_max = angle_max;
   output.range_min = range_min;
   output.range_max = range_max;
-  output.time_increment = 0.0;
-  output.scan_time = 0.0;
+  output.time_increment = (beam_size_ > 0 && scan_time > 0.0)
+                          ? static_cast<float>(scan_time / beam_size_)
+                          : 0.0f;
+  output.scan_time = static_cast<float>(scan_time);
   
   /*First fill all the data with Nan*/
   output.ranges.assign(beam_size_, std::numeric_limits<float>::infinity());

@@ -19,6 +19,7 @@
 #include <rclcpp/time.hpp>
 #include <rclcpp/time_source.hpp>
 #include <rclcpp/clock.hpp>
+#include <rclcpp/duration.hpp>
 
 #define ANGLE_TO_RADIAN(angle) ((angle)*3141.59/180000.0)
 
