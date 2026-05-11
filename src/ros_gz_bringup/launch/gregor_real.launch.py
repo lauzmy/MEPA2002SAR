@@ -107,10 +107,10 @@ def generate_launch_description():
         parameters=[{'use_sim_time': False}]
     )
 
-    thermal_processor = Node(
+    thermal_processing = Node(
         package='ros_gz_application',
         executable='thermal_processing',
-        name='thermal_processor',
+        name='thermal_procesing',
         output='screen',
         parameters=[{'use_sim_time': False}]
     )
@@ -227,7 +227,7 @@ def generate_launch_description():
         ldlidar_node,
         collision_avoidance,
         thermal_Reading,
-        thermal_processor,
+        thermal_processing,
         ekf_node,
         slam,
         nav2,
