@@ -17,7 +17,7 @@ lidar3d:
   ros__parameters:
     # Tilt sweep — ±20° kept (40° vertical FOV is plenty given MOLA's
     # gravity-prior + EKF motion-prior fusion, see mola_lo.launch.py).
-    min_angle_deg: 0.0
+    min_angle_deg: -30.0
     max_angle_deg: 30.0
     # Sweep + publish window: 1.0 s (was 0.5 s).
     #
