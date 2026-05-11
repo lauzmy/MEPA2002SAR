@@ -1,0 +1,10 @@
+filters:
+  #...
+  - class_name: mp2p_icp_filters::FilterSOR
+    params:
+      input_pointcloud_layer: 'raw'
+      output_layer_inliers: 'filtered'
+      #output_layer_outliers: 'noise'
+      mean_k: 80
+      std_dev_mul: 0.8
+      parallelization_grain_size: 1024
