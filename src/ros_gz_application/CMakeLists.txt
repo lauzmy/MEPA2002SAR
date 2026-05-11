@@ -16,6 +16,12 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+	nodes/lidar_leveler.py
+	DESTINATION lib/${PROJECT_NAME}
+	RENAME lidar_leveler
+)
+
+install(PROGRAMS
 	nodes/YOLO.py
 	DESTINATION lib/${PROJECT_NAME}
 	RENAME YOLO

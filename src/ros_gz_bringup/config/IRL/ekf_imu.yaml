@@ -2,11 +2,7 @@
 ekf_filter_node:
   ros__parameters:
     use_sim_time: false
-    # 50 Hz (was 10 Hz). BNO085 publishes /imu/data at 50 Hz and the
-    # ESP32 wheel odometry runs at >=20 Hz, so a 50 Hz EKF gives MOLA-LO
-    # a tight motion prior that interpolates smoothly across a 0.5 s
-    # lidar sweep — see config/sim/ekf.yaml for the matching change.
-    frequency: 50.0
+    frequency: 15.0
     two_d_mode: true
     publish_tf: true
 
@@ -16,40 +12,21 @@ ekf_filter_node:
     base_link_frame: base_footprint
     world_frame: odom
 
-    # Wheel Odometry
+    # Wheel Odometry 
     odom0: /wheel/odometry
     odom0_config: [false, false, false,  # X, Y, Z - Absolutt posisjon i meter
                    false, false, false,  # Roll, Pitch, Yaw - Absolutt kompassvinkel
                    true,  true,  false,  # Vx, Vy, Vz - Hastighet forover/bakover og sidelengs i m/s
-                   false, false, true,   # Vroll, Vpitch, Vyaw - encoder-derived yaw rate (mecanum)
-                   false, false, false]  # Ax, Ay, Az - Lineær akselerasjon
-    # Vyaw from encoders: on a mecanum platform the kinematic model
-    # computes yaw rate from the four wheel speeds. It is an independent
-    # measurement from the IMU gyro and matches sim (which also fuses
-    # Vyaw from the MecanumDrive plugin). Fusing both tightens the yaw
-    # rate estimate and gives the EKF a cross-check against gyro drift.
+                   false, false, false,  # Vroll, Vpitch, Vyaw - Rotasjonshastighet
+                   false,  false, false]  # Ax, Ay, Az - Lineær akselerasjon
     odom0_differential: false
-    odom0_twist_rejection_threshold: 2.0  # m/s or rad/s — rejects wheel slip spikes
 
     # IMU Data
     imu0: /imu/data
-    # Yaw absolute fusion is ENABLED (6th flag). The BNO085's game
-    # rotation vector is magnetometer-free, so its yaw is immune to
-    # indoor magnetic distortion and acts as a long-term yaw anchor
-    # against gyro integration drift. Without this, real-robot yaw
-    # was pure gyro integration and drifted seconds-to-minutes,
-    # showing up as MOLA "localization drifts on rotations".
-    imu0_config: [false, false, false,   # X, Y, Z - position (IMU has none)
-                  false, false, true,    # Roll, Pitch, Yaw absolute (yaw ON)
-                  false, false, false,   # Vx, Vy, Vz (IMU has none)
-                  false, false, true,    # Vroll, Vpitch, Vyaw (gyro ON)
-                  false, false, false]   # Ax, Ay, Az
+    imu0_config: [false, false, false,   # X, Y, Z - Absolutt posisjon (IMU har uansett ikke dette)
+                  false, false, false,   # Roll, Pitch, Yaw - Absolutt basert på kompass (slått AV pga støy!)
+                  false, false, false,   # Vx, Vy, Vz - Hastighet (IMU har ikke dette)
+                  false, false, true,    # Vroll, Vpitch, Vyaw - Gyroskopets rotasjonshastighet (PÅ!)
+                  false, false, false]   # Ax, Ay, Az - Akselerometerets lineære akselerasjon
     imu0_differential: false
     imu0_relative: false
-    imu0_queue_size: 10
-    # BNO085 publishes raw linear acceleration (gravity included). Even
-    # though we currently only fuse vyaw (no accel channels enabled
-    # above), keep this on so a future config that enables ax/ay/az
-    # doesn't silently drift the EKF by 9.81 m/s².
-    imu0_remove_gravitational_acceleration: true
-    imu0_twist_rejection_threshold: 5.0   # rad/s — rejects IMU jolt spikes

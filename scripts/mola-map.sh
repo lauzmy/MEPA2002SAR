@@ -32,14 +32,21 @@ SYSTEM_YAML_NOVIZ="${MOLA_SYSTEM_YAML_NOVIZ:-$SCRIPT_DIR/mola_system_noviz.yaml}
 usage() {
     echo "Usage: $0 [--noviz] <bag_path> [extra mola-cli args...]" >&2
     echo "       $0 [--noviz] -l | --latest    [extra mola-cli args...]" >&2
+    echo >&2
+    echo "  To force the saved .simplemap level (roll=pitch=z=0), run" >&2
+    echo "  scripts/flatten_simplemap.py against it AFTER MOLA exits, on a" >&2
+    echo "  host that has the mrpt python bindings installed (the docker image" >&2
+    echo "  doesn't ship them)." >&2
 }
 
 # ---- argument parsing -------------------------------------------------------
 NOVIZ=0
-if [ "$#" -ge 1 ] && { [ "$1" = "--noviz" ] || [ "$1" = "-n" ]; }; then
-    NOVIZ=1
-    shift 1
-fi
+while [ "$#" -ge 1 ]; do
+    case "$1" in
+        --noviz|-n) NOVIZ=1; shift 1 ;;
+        *) break ;;
+    esac
+done
 
 if [ "$#" -lt 1 ]; then
     usage

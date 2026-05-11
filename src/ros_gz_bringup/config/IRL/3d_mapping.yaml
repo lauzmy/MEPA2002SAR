@@ -17,8 +17,8 @@ lidar3d:
   ros__parameters:
     # Tilt sweep — ±20° kept (40° vertical FOV is plenty given MOLA's
     # gravity-prior + EKF motion-prior fusion, see mola_lo.launch.py).
-    min_angle_deg: -20.0
-    max_angle_deg:  20.0
+    min_angle_deg: 0.0
+    max_angle_deg: 30.0
     # Sweep + publish window: 1.0 s (was 0.5 s).
     #
     # Why slower: each LD06 revolution physically spans ~100 ms. At a
@@ -44,11 +44,11 @@ lidar3d:
     # See also the per-beam timestamp fix in ros_gz_application/nodes/
     # lidar3d.py and the matching `time_increment` / `scan_time` /
     # header.stamp fix in src/sensors/ldlidar/src/lipkg.cpp.
-    sweep_period_s: 1.0    # 40° of tilt per cloud, 40°/s servo speed
+    sweep_period_s: 0.5    # 40° of tilt per cloud, 40°/s servo speed
     # Publish a merged cloud every `publish_period_s`, containing the
     # *last `sweep_period_s`* of beams. Equal to sweep_period_s →
     # consecutive clouds are disjoint (no overlap, max throughput).
-    publish_period_s: 1.0
+    publish_period_s: 0.5
     # Topics
     scan_topic: /scan
     cloud_topic: /lidar3d/points
