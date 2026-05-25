@@ -34,7 +34,7 @@ READ_PERIOD_S = 0.02   # 50 Hz status poll from ESP32.
 ODOM_FRAME = 'odom'
 BASE_FRAME = 'base_footprint'
 
-# Firmware encodes battery voltage as byte = volts * 255/16 (see ESP32_Motor_Controller.ino).
+# Firmware encodes battery voltage as byte = volts * 255/16 (see hardware/firmware/motor_controller/).
 VBATT_SCALE_V_PER_BYTE = 16.0 / 255.0
 
 # --- Odometry covariance (diagonals: x, y, z, roll, pitch, yaw / vx, vy, vz, wroll, wpitch, wyaw) ---

@@ -15,9 +15,11 @@ Deep-dive design docs live in the [project wiki](https://github.com/lauzmy/MEPA2
 │   ├── gregor_sim_description/    # Gazebo worlds (gregor_description holds the robot URDF)
 │   ├── m-explore-ros2/            # vendored: frontier exploration (explore_lite + map_merge)
 │   └── sensors/ldlidar/           # vendored: LD06 LiDAR driver
-├── ESP32_Motor_Controller/    # Arduino firmware for the mecanum motor controller (UART ↔ allocator.py)
-├── ESP32_pot_rot_encoder/     # Arduino firmware for the tilt-pot encoder (UART ↔ lidar3d.py)
-├── Electronics/               # KiCad PCB project
+├── hardware/
+│   ├── firmware/
+│   │   ├── motor_controller/  # Arduino firmware for the mecanum motor controller (UART ↔ allocator.py)
+│   │   └── encoder/           # Arduino firmware for the tilt-pot encoder (UART ↔ lidar3d.py)
+│   └── electronics/           # KiCad PCB project
 ├── docs/                      # Style guide + cleanup/restructure specs
 └── Dockerfile, Makefile, compose.yml  # Containerised dev environment
 ```
@@ -71,11 +73,11 @@ make recreate
 
 ## Firmware
 
-The two ESP32 firmware projects under `ESP32_Motor_Controller/` and `ESP32_pot_rot_encoder/` talk to `gregor_application` over UART. Flash with the Arduino IDE / arduino-cli. Wire protocols are documented at the top of each `.ino` file and on the Python side in [`allocator.py`](src/gregor_application/nodes/allocator.py) and [`lidar3d.py`](src/gregor_application/nodes/lidar3d.py).
+The two ESP32 firmware sketches under `hardware/firmware/motor_controller/` and `hardware/firmware/encoder/` talk to `gregor_application` over UART. Flash with the Arduino IDE / arduino-cli. Wire protocols are documented at the top of each `.ino` file and on the Python side in [`allocator.py`](src/gregor_application/nodes/allocator.py) and [`lidar3d.py`](src/gregor_application/nodes/lidar3d.py).
 
 ## Hardware design
 
-`Electronics/Electronics.kicad_pro` — open with KiCad 8+.
+`hardware/electronics/Electronics.kicad_pro` — open with KiCad 8+.
 
 ## Development
 

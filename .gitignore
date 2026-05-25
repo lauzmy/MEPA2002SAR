@@ -57,3 +57,15 @@ rosbags/
 icp-logs/
 *.simplemap
 *.icplog
+
+# IDE local-history (VS Code "Local History" extension etc.)
+**/.history/
+
+# KiCad runtime / auto-backups
+**/*-backups/
+*.kicad_pro_lck
+*.kicad_prl
+*-cache.lib
+fp-info-cache
+*_autosave-*
+*~

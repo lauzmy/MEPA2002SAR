@@ -18,7 +18,7 @@ This is a **code-first** pass. The wiki revamp comes later and will lean on the 
 1. **Python nodes** — `MEPA2002SAR/src/ros_gz_application/nodes/*.py` (~2100 lines, 9 files).
 2. **Launch files** — `MEPA2002SAR/src/ros_gz_bringup/launch/*.py` and `ros_gz_application/launch/*.py`. Cleaned alongside the node they launch.
 3. **Robot description** — `GregorURDF/` and `ros_gz_description/` (URDF/xacro, RViz/Gazebo configs).
-4. **ESP32 firmware** — `ESP32_Motor_Controller/`, `ESP32_pot_rot_encoder/` (C++).
+4. **ESP32 firmware** — `hardware/firmware/motor_controller/`, `hardware/firmware/encoder/` (C++).
 
 ## The standard
 
