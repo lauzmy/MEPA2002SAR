@@ -1,26 +1,16 @@
 #!/usr/bin/env bash
-# Run MOLA-LO offline against a recorded bag from this project.
-#
-# Unlike `mola-lo-gui-rosbag2` (which uses an upstream system YAML that may
-# omit the wheel-odometry sensor entry), this wrapper invokes `mola-cli`
-# directly against our own MEPA2002SAR-tailored system YAML, ensuring:
-#   - LiDAR topic           : /lidar3d/points (3-D cloud built by lidar3d)
-#   - Wheel odometry topic  : /wheel/odometry (nav_msgs/Odometry, mecanum)
-#   - State estimator       : Smoother (only one that fuses wheel odometry)
-#   - Planar motion         : enforced (flat floor, pins z/roll/pitch to 0)
+# Run MOLA-LO offline against a recorded bag. See wiki: MolaLo/Offline-Mapping.
 #
 # Usage:
-#   ./mola-map.sh <bag_path>          [extra mola-cli args...]
-#   ./mola-map.sh -l | --latest       [extra mola-cli args...]
+#   ./mola-map.sh [--noviz] <bag_path>     [extra mola-cli args...]
+#   ./mola-map.sh [--noviz] -l | --latest  [extra mola-cli args...]
 #
-# Examples:
-#   ./mola-map.sh ~/ros2_ws/rosbags/3d_mapping_2026-05-10_03-01-13
-#   ./mola-map.sh --latest
-#
-# Override env vars before invoking if you need to tweak something:
-#   MOLA_LIDAR_TOPIC=/foo ./mola-map.sh -l
-#   ROSBAGS_DIR=/some/other/dir ./mola-map.sh -l
-#   MOLA_STATE_ESTIMATOR=mola::state_estimation_simple::StateEstimationSimple ./mola-map.sh -l
+# Override behaviour via env vars (see the wiki page for the full set):
+#   ROSBAGS_DIR              — where --latest looks (default: ~/ros2_ws/rosbags)
+#   MOLA_LIDAR_TOPIC         — default /lidar3d/points
+#   MOLA_ODOMETRY_TOPIC      — default /odometry/filtered (EKF-fused)
+#   MOLA_STATE_ESTIMATOR     — see wiki: MolaLo/Smoother-vs-Simple
+#   MOLA_SIMPLEMAP_OUTPUT    — defaults to "<bag>.simplemap"; set '' to disable
 
 set -euo pipefail
 
@@ -32,14 +22,9 @@ SYSTEM_YAML_NOVIZ="${MOLA_SYSTEM_YAML_NOVIZ:-$SCRIPT_DIR/mola_system_noviz.yaml}
 usage() {
     echo "Usage: $0 [--noviz] <bag_path> [extra mola-cli args...]" >&2
     echo "       $0 [--noviz] -l | --latest    [extra mola-cli args...]" >&2
-    echo >&2
-    echo "  To force the saved .simplemap level (roll=pitch=z=0), run" >&2
-    echo "  scripts/flatten_simplemap.py against it AFTER MOLA exits, on a" >&2
-    echo "  host that has the mrpt python bindings installed (the docker image" >&2
-    echo "  doesn't ship them)." >&2
 }
 
-# ---- argument parsing -------------------------------------------------------
+# --- Argument parsing ---
 NOVIZ=0
 while [ "$#" -ge 1 ]; do
     case "$1" in
@@ -91,36 +76,27 @@ if [ ! -f "$SYSTEM_YAML" ]; then
     exit 1
 fi
 
-# ---- resolve absolute paths to bundled YAMLs --------------------------------
-# Our system YAML defaults reference relative paths like
-# "../pipelines/lidar3d-default.yaml" and
-# "../state-estimator-params/state-estimation-smoother.yaml". Those are
-# relative to mola-cli-launchs/, which doesn't exist next to our YAML, so we
-# resolve them to absolute install paths instead.
-
+# --- Resolve install paths for MOLA pipeline + estimator YAMLs ---
+# Our system YAML references "../pipelines/..." relative to mola-cli-launchs/
+# which doesn't exist next to it; resolve to absolute install paths instead.
 MOLA_LO_PREFIX="$(ros2 pkg prefix mola_lidar_odometry 2>/dev/null || true)"
 if [ -z "$MOLA_LO_PREFIX" ]; then
-    echo "Error: cannot locate mola_lidar_odometry package (ros2 pkg prefix failed)." >&2
-    echo "       Have you sourced your ROS 2 environment?" >&2
+    echo "Error: cannot locate mola_lidar_odometry — source your ROS 2 environment first." >&2
     exit 1
 fi
 MOLA_LO_SHARE="$MOLA_LO_PREFIX/share/mola_lidar_odometry"
 
+# LO pipeline. See wiki: MolaLo/Pipelines for why lidar3d-default beats
+# lidar3d-gicp-optimize-twist on our slow indoor + sparse LD06 cloud.
 if [ -z "${MOLA_ODOMETRY_PIPELINE_YAML:-}" ]; then
-    # NOTE: We tried lidar3d-gicp-optimize-twist.yaml. With our slow indoor
-    # motion and sparse single-LD06 cloud, the twist solver had no
-    # observability and diverged into long radial streaks through origin
-    # (see git history). The default pipeline + a tight motion-model prior
-    # from the wheel+IMU-fed Simple estimator gives much better deskew.
     export MOLA_ODOMETRY_PIPELINE_YAML="$MOLA_LO_SHARE/pipelines/lidar3d-default.yaml"
 fi
 export MOLA_OPTIMIZE_TWIST="${MOLA_OPTIMIZE_TWIST:-false}"
 
+# Smoother-estimator YAML. Our local override adds `kinematic_model` (the
+# installed smoother YAML omits it). Fall back to bundled if our copy is gone.
 if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ] && \
    [[ "${MOLA_STATE_ESTIMATOR:-}" == *"StateEstimationSmoother"* ]]; then
-    # Prefer our local override (which adds the `kinematic_model` key the
-    # installed smoother requires but the bundled YAML omits). Fall back to
-    # bundled YAMLs if our copy is absent.
     if [ -f "$SCRIPT_DIR/state-estimation-smoother.yaml" ]; then
         SMOOTHER_YAML="$SCRIPT_DIR/state-estimation-smoother.yaml"
     else
@@ -140,8 +116,7 @@ if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ] && \
     fi
 fi
 
-# Default Simple-estimator YAML path (when smoother not selected). Search the
-# usual install locations.
+# Simple-estimator YAML (when smoother not selected). Search common install paths.
 if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ]; then
     SIMPLE_CANDIDATES=(
         "$SCRIPT_DIR/state-estimation-simple.yaml"
@@ -159,16 +134,13 @@ if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ]; then
     fi
 fi
 
-# ---- auto-save simplemap output path (derived from bag name by default) ----
-# The simplemap is written when MOLA quits at dataset end.
-# Override with MOLA_SIMPLEMAP_OUTPUT=/some/path.simplemap, or set to ''
-# to disable auto-save (requires manual GUI save instead).
+# Auto-derive simplemap output from bag name. MOLA_SIMPLEMAP_OUTPUT='' disables auto-save.
 if [ -z "${MOLA_SIMPLEMAP_OUTPUT+x}" ]; then
     BAG_NAME="$(basename -- "$BAG")"
     export MOLA_SIMPLEMAP_OUTPUT="$(dirname -- "$BAG")/${BAG_NAME%.mcap}.simplemap"
 fi
 
-# Compute expected replay duration from metadata.yaml (if present)
+# Expected bag duration (best-effort, for the [mola-map] info banner only).
 BAG_DURATION_SEC=""
 META_YAML=""
 if [ -d "$BAG" ]; then
@@ -177,114 +149,45 @@ elif [ -f "${BAG%.mcap}/../metadata.yaml" ]; then
     META_YAML="$(dirname "$BAG")/metadata.yaml"
 fi
 if [ -n "$META_YAML" ] && [ -f "$META_YAML" ]; then
-    # Extract nanoseconds field from the scalar under `duration:`
     BAG_NS=$(grep -A1 '^ *duration:' "$META_YAML" | grep 'nanoseconds:' | head -1 | awk '{print $2}' || true)
     if [ -n "$BAG_NS" ] && [ "$BAG_NS" -gt 0 ] 2>/dev/null; then
         TIME_WARP="${MOLA_TIME_WARP:-1.0}"
-        # Use awk for floating-point division
         BAG_DURATION_SEC=$(awk -v ns="$BAG_NS" -v tw="$TIME_WARP" 'BEGIN{printf "%.1f", ns/1e9/tw}')
     fi
 fi
 
-# ---- topic / behaviour env vars (all overridable) ---------------------------
+# --- Topics, frames, estimator (all overridable via env) ---
 export MOLA_INPUT_ROSBAG2="$BAG"
-# Enable simplemap generation (pipeline default is false — without this flag,
-# MOLA builds local-map keyframes but writes zero simplemap keyframes).
 export MOLA_GENERATE_SIMPLEMAP="${MOLA_GENERATE_SIMPLEMAP:-true}"
 export MOLA_LIDAR_TOPIC="${MOLA_LIDAR_TOPIC:-/lidar3d/points}"
-# Prefer the EKF-fused odometry over the raw wheel odom: in sim, EKF
-# combines MecanumDrive twist with the gyro yaw rate, smoothing any
-# kinematics-only quirks. Override with MOLA_ODOMETRY_TOPIC=/wheel/odometry
-# to compare against the raw signal.
+# EKF-fused odometry preferred; raw /wheel/odometry is a useful comparison override.
 export MOLA_ODOMETRY_TOPIC="${MOLA_ODOMETRY_TOPIC:-/odometry/filtered}"
-# REP-105: odom → base_footprint → base_link. The MecanumDrive plugin
-# publishes odom→base_footprint, so anchor MOLA on base_footprint to avoid
-# a constant ~25 mm Z bias from chaining through base_link.
+# Anchor on base_footprint to avoid the ~25 mm Z bias from going via base_link. See wiki: MolaLo/Frames.
 export MOLA_TF_BASE_LINK="${MOLA_TF_BASE_LINK:-base_footprint}"
-# Default to Simple, NOT Smoother. The Smoother shipped in jazzy
-# (libmola_state_estimation_smoother) segfaults inside
-# `process_pending_gtsam_updates()` on the first lidar scan when fed our bag,
-# triggered by an invalid (UINT64_MAX) timestamp on a TF observation it stores
-# as kf_idx=0. Simple ALSO fuses our explicit CObservationOdometry entry,
-# which is what we actually need. Override with:
-#   MOLA_STATE_ESTIMATOR=mola::state_estimation_smoother::StateEstimationSmoother
+# Default Simple, not Smoother — Smoother segfaults on jazzy. See wiki: MolaLo/Smoother-vs-Simple.
 export MOLA_STATE_ESTIMATOR="${MOLA_STATE_ESTIMATOR:-mola::state_estimation_simple::StateEstimationSimple}"
 export MOLA_NAVSTATE_KINEMATIC_MODEL="${MOLA_NAVSTATE_KINEMATIC_MODEL:-KinematicModel::ConstantVelocity}"
-# IMPORTANT: must be lowercase `true`/`false` — yaml-cpp (YAML 1.2) parses
-# `True`/`False` as plain strings, which silently disables the constraint and
-# lets roll/pitch leak into the simplemap (visible as a tilted local map).
+# Lowercase `true`/`false` matters — yaml-cpp treats `True`/`False` as plain strings.
 export MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION="${MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION:-true}"
-# Tighten the relative-pose angular sigma from the YAML default of 0.06 rad
-# (~3.4°) to 0.03 rad (~1.7°). This belt-and-braces with enforce_planar_motion:
-# even when ICP briefly publishes a tilted transform between estimator updates
-# (sparse single-LD06 ring + flat corridor = poor roll/pitch observability),
-# the estimator now down-weights it enough that it can't pitch the local map.
-# Note: this knob is isotropic across roll/pitch/yaw, so it also constrains
-# yaw — relax via MOLA_NAVSTATE_SIGMA_REL_POSE_ANG=... if cornering drifts.
+# Isotropic relative-pose angular sigma. See wiki: MolaLo/SparseLD06-Tuning for why 0.03 rad.
 export MOLA_NAVSTATE_SIGMA_REL_POSE_ANG="${MOLA_NAVSTATE_SIGMA_REL_POSE_ANG:-0.03}"
 
-# ---- pipeline tweaks for our (no-intensity) LD06 build ----------------------
-# Our /lidar3d/points cloud has only x,y,z (no intensity field). The bundled
-# lidar3d-default.yaml tries to colour the GUI cloud by `intensity`, which
-# segfaults on the first viz update. Use `z` instead.
+# --- Pipeline tweaks for our (no-intensity) LD06 build ---
+# Our cloud has only x,y,z; the default GUI cloud colouring by `intensity` segfaults.
 export MOLA_GUI_CURRENT_CLOUD_COLOR_FIELD="${MOLA_GUI_CURRENT_CLOUD_COLOR_FIELD:-z}"
 export MOLA_GUI_LAST_CLOUDS_COLOR_FIELD="${MOLA_GUI_LAST_CLOUDS_COLOR_FIELD:-z}"
 
-# IMU: the robot has a BNO055 publishing sensor_msgs/Imu on /imu/data, and the
-# bags include it. We deliberately do NOT register it as a MOLA sensor (see
-# mola_system.yaml) — the wheel/EKF odometry alone gives better results here.
-# The estimator and gravity-correction knobs are forced off as belt-and-braces.
-# To re-enable, add the CObservationIMU entry back in mola_system.yaml and set:
-#   MOLA_NAVSTATE_IMU_SENSOR_NAME=imu MOLA_IMU_GRAVITY_CORRECTION=true ./mola-map.sh ...
+# --- IMU intentionally not registered as a MOLA sensor. See wiki: MolaLo/IMU-Config. ---
 export MOLA_NAVSTATE_IMU_SENSOR_NAME="${MOLA_NAVSTATE_IMU_SENSOR_NAME:-__none__}"
 export MOLA_IMU_GRAVITY_CORRECTION="${MOLA_IMU_GRAVITY_CORRECTION:-false}"
-# LD06 indoor range is ~0.1–12 m; the upstream default of 5 m would gut our
-# cloud. Drop it to 0.5 m so close-range features survive.
+# LD06 indoor range ~0.1-12 m; upstream default 5 m would gut our cloud.
 export MOLA_ABS_MIN_SENSOR_RANGE="${MOLA_ABS_MIN_SENSOR_RANGE:-0.2}"
 
-# ---- tuning for sparse single-LD06 indoor mapping ---------------------------
-#
-# Context: /lidar3d/points at ~1.7 Hz, x/y/z only (no intensity), indoor,
-# planar motion enforced. Bag 3d_mapping_20260510_153453 produced only 19
-# simplemap keyframes over 2m52s in a ~4m corridor — way too sparse.
-#
-# ESTIMATED_SENSOR_MAX_RANGE ≈ 12 m for LD06.
-#
-# ICP point counts:
-#   Default decimated_for_map = 10000 pts, decimated_for_icp = 3000 pts.
-#   Our sparse cloud rarely exceeds a few hundred pts after range filtering,
-#   so the adaptive decimator already passes everything through. No change needed.
-#
-# Simplemap keyframe spacing:
-#   Default: (1.0e-2 + sqrt(wx²+wy²+wz²)*1.0)*12 m ≈ 0.12 m translation,
-#            15 + angular_vel*500 deg ≈ 15 deg rotation.
-#   For dense indoor coverage we want a keyframe every ~0.3 m / 10 deg.
-export MOLA_SIMPLEMAP_MIN_XYZ="${MOLA_SIMPLEMAP_MIN_XYZ:-0.3}"   # m — one KF per ~30 cm
-export MOLA_SIMPLEMAP_MIN_ROT="${MOLA_SIMPLEMAP_MIN_ROT:-1}"      # deg — one KF per ~10°
-
-# Local-map keyframe spacing (affects ICP quality, not simplemap directly):
-#   Default expression at zero angular rate ≈ 0.012 m — keeps almost every scan,
-#   which is fine for a slow robot but wastes memory with long bags. Keep default.
-# export MOLA_MIN_XYZ_BETWEEN_MAP_UPDATES=...
-
-# ICP minimum quality threshold:
-#   Default 0.50. With our sparse cloud and flat corridors, ICP can produce
-#   low-quality matches without outright failing. Tighten to reject bad matches
-#   before they corrupt the trajectory, but not so tight we drop valid scans.
+# --- Sparse single-LD06 indoor mapping tuning. See wiki: MolaLo/SparseLD06-Tuning. ---
+export MOLA_SIMPLEMAP_MIN_XYZ="${MOLA_SIMPLEMAP_MIN_XYZ:-0.3}"          # keyframe per ~30 cm
+export MOLA_SIMPLEMAP_MIN_ROT="${MOLA_SIMPLEMAP_MIN_ROT:-1}"             # keyframe per ~1°
 export MOLA_MINIMUM_ICP_QUALITY="${MOLA_MINIMUM_ICP_QUALITY:-0.40}"
-
-# Voxel size for map decimation:
-#   Default 0.15 m — fine for dense outdoor LiDARs but wastes resolution on
-#   our already-sparse indoor cloud. Reduce to keep more geometric detail.
 export MOLA_CLOUD_DECIMATION_VOXEL_SIZE="${MOLA_CLOUD_DECIMATION_VOXEL_SIZE:-0.08}"
-
-# Local map retention radius:
-#   Default max(100, 1.5*12) = 100 m — keeps the entire map in memory.
-#   Fine for short indoor sessions; leave at default.
-# export MOLA_LOCAL_MAP_MAX_SIZE=...
-
-# Log ICP debug files for any match below 0.45 quality so we can inspect
-# failures without drowning in logs.
 export MOLA_WRITE_DEBUG_ICP_LOG_IF_QUALITY_UNDER="${MOLA_WRITE_DEBUG_ICP_LOG_IF_QUALITY_UNDER:-0.45}"
 
 cat <<EOF
@@ -299,7 +202,7 @@ cat <<EOF
 [mola-map] base_link tf frame       : $MOLA_TF_BASE_LINK
 [mola-map] Kinematic model          : $MOLA_NAVSTATE_KINEMATIC_MODEL
 [mola-map] Enforce planar motion    : $MOLA_NAVSTATE_ENFORCE_PLANAR_MOTION
-[mola-map] Generate simplemap        : $MOLA_GENERATE_SIMPLEMAP
+[mola-map] Generate simplemap       : $MOLA_GENERATE_SIMPLEMAP
 [mola-map] SimpleMap output         : ${MOLA_SIMPLEMAP_OUTPUT:-<auto-save disabled>}
 [mola-map] Bag replay duration      : ${BAG_DURATION_SEC:+~${BAG_DURATION_SEC}s (at ${MOLA_TIME_WARP:-1.0}x)}${BAG_DURATION_SEC:-unknown}
 [mola-map] --- tuning ---
@@ -313,12 +216,10 @@ EOF
 
 if [ "${MOLA_GENERATE_SIMPLEMAP:-true}" != "true" ]; then
     echo "[mola-map] WARNING: MOLA_GENERATE_SIMPLEMAP is not true — simplemap will NOT be built." >&2
-    echo >&2
 elif [ -z "${MOLA_SIMPLEMAP_OUTPUT:-}" ]; then
     echo "[mola-map] WARNING: MOLA_SIMPLEMAP_OUTPUT is empty — auto-save is DISABLED." >&2
     echo "[mola-map]          You must press 'Save Simple Map' in the GUI AFTER the bag" >&2
     echo "[mola-map]          finishes replaying (wait for the progress to stop)." >&2
-    echo >&2
 fi
 
 exec mola-cli "$SYSTEM_YAML" "$@"

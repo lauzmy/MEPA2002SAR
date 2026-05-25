@@ -1,10 +1,5 @@
-# =============================================================================
-#  Headless variant of mola_system.yaml (no MolaViz module)
-# -----------------------------------------------------------------------------
-#  Use this when --noviz is passed to mola-map.sh, to isolate whether a crash
-#  is happening in the GUI render path or in the LO/state-estimation pipeline.
-#  Identical to mola_system.yaml minus the `viz` module.
-# =============================================================================
+# Headless variant of mola_system.yaml (no MolaViz module).
+# Used when --noviz is passed to mola-map.sh; isolates GUI render crashes from pipeline crashes.
 
 modules:
   - name: lidar_odom
