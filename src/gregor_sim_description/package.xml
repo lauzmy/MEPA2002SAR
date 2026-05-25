@@ -3,7 +3,7 @@
 <package format="3">
   <name>gregor_sim_description</name>
   <version>0.0.0</version>
-  <description>Gazebo sim assets for the Gregor robot: SDF worlds + sim-only model overrides.</description>
+  <description>Gazebo sim worlds for the Gregor robot. (Robot URDF + meshes live in gregor_description.)</description>
   <maintainer email="fllufy.mydland@gmail.com">Mydland</maintainer>
   <license>Apache 2.0</license>
 

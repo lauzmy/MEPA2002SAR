@@ -51,3 +51,9 @@ maps/
 *.pgm
 *.posegraph
 *.data
+
+# Runtime outputs
+rosbags/
+icp-logs/
+*.simplemap
+*.icplog

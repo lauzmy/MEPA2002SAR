@@ -12,7 +12,7 @@ Deep-dive design docs live in the [project wiki](https://github.com/lauzmy/MEPA2
 │   ├── gregor_application/        # Python nodes: lidar3d, allocator, IMU, YOLO, thermal, collision, ...
 │   ├── gregor_bringup/            # Launch files + YAML configs
 │   ├── gregor_description/        # Real-robot URDF + meshes (CAD-exported)
-│   ├── gregor_sim_description/    # Gazebo worlds + sim-only model assets
+│   ├── gregor_sim_description/    # Gazebo worlds (gregor_description holds the robot URDF)
 │   ├── m-explore-ros2/            # vendored: frontier exploration (explore_lite + map_merge)
 │   └── sensors/ldlidar/           # vendored: LD06 LiDAR driver
 ├── ESP32_Motor_Controller/    # Arduino firmware for the mecanum motor controller (UART ↔ allocator.py)
