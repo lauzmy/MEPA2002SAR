@@ -83,11 +83,9 @@ def generate_launch_description():
     # ---- Path resolution ---------------------------------------------------
     # Reuse our local state-estimator YAMLs (same defaults as the offline
     # mola-map.sh script). The upstream system YAML expects an env var.
-    repo_scripts = os.path.normpath(os.path.join(
-        get_package_share_directory('gregor_bringup'),
-        '..', '..', '..', '..', 'scripts'))
-    simple_yaml = os.path.join(repo_scripts, 'state-estimation-simple.yaml')
-    smoother_yaml = os.path.join(repo_scripts, 'state-estimation-smoother.yaml')
+    bringup_scripts = os.path.join(get_package_share_directory('gregor_bringup'), 'scripts')
+    simple_yaml = os.path.join(bringup_scripts, 'state-estimation-simple.yaml')
+    smoother_yaml = os.path.join(bringup_scripts, 'state-estimation-smoother.yaml')
 
     pipeline_yaml = os.path.join(
         pkg_mola_lo, 'pipelines', 'lidar3d-default.yaml')

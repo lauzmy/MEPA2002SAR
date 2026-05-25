@@ -18,7 +18,6 @@ Deep-dive design docs live in the [project wiki](https://github.com/lauzmy/MEPA2
 ├── ESP32_Motor_Controller/    # Arduino firmware for the mecanum motor controller (UART ↔ allocator.py)
 ├── ESP32_pot_rot_encoder/     # Arduino firmware for the tilt-pot encoder (UART ↔ lidar3d.py)
 ├── Electronics/               # KiCad PCB project
-├── scripts/                   # Offline MOLA mapping helpers + YAML configs
 ├── docs/                      # Style guide + cleanup/restructure specs
 └── Dockerfile, Makefile, compose.yml  # Containerised dev environment
 ```
