@@ -238,7 +238,7 @@ void LiPkg::ToLaserscan(std::vector<PointData> src)
   // Per-beam time/scan timing. mSpeed is in deg/s (see angle_increment
   // formula above: mSpeed/4500 deg-per-beam = mSpeed/(450*10) at 10 Hz).
   // We anchor the header stamp to the *start* of the revolution so the
-  // downstream lidar3d node (ros_gz_application/nodes/lidar3d.py) can
+  // downstream lidar3d node (gregor_application/nodes/lidar3d.py) can
   // reconstruct per-beam times as header.stamp + i*time_increment.
   // Previously time_increment was 0 → every beam in the ring was
   // assigned the same tilt angle, producing visible "ladder" streaks

@@ -150,7 +150,7 @@ def _sim_branch(pkg_bringup, pkg_description, config_file, enable_mola):
 
     # lidar3d in sim: commanded angle only (no UART/PWM). Gazebo's bridge feeds /joint_states.
     lidar3d = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='lidar3d',
         name='lidar3d',
         output='screen',
@@ -215,7 +215,7 @@ def _real_branch(pkg_bringup, config_file, enable_mola, record_bag):
     )
 
     lidar3d = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='lidar3d',
         name='lidar3d',
         output='screen',
@@ -223,7 +223,7 @@ def _real_branch(pkg_bringup, config_file, enable_mola, record_bag):
     )
 
     allocator = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='allocator',
         name='allocator',
         output='screen',
@@ -232,7 +232,7 @@ def _real_branch(pkg_bringup, config_file, enable_mola, record_bag):
 
     # BNO085 on I²C-4 publishing /imu/data at 50 Hz with frame_id=imu_link.
     imu_node = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='IMU',
         name='imu_node',
         output='screen',

@@ -215,7 +215,7 @@ def generate_launch_description():
             'imu_gravity_correction':      'True',
             # IMU sensor pose lookup. The Gazebo SDF now sets
             # `<gz_frame_id>imu_link</gz_frame_id>` on the IMU sensor,
-            # and the real BNO085 driver (ros_gz_application/IMU.py)
+            # and the real BNO085 driver (gregor_application/IMU.py)
             # publishes /imu/data with frame_id="imu_link" too. Both map
             # to the URDF static TF base_link → imu_link broadcast by
             # robot_state_publisher, so MOLA can correctly rotate the

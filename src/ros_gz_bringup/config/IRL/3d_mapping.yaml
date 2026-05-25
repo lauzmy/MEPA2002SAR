@@ -4,7 +4,7 @@
 # Set sim: true to launch with Gazebo instead of real hardware.
 _launch_settings:
   ros__parameters:
-    sim: false
+    sim: true
 
 ldlidar:
   ros__parameters:
@@ -41,7 +41,7 @@ lidar3d:
     #     constrain ICP roll/pitch tightly, so we don't need a fast
     #     sweep to inject vertical structure for stability.
     #
-    # See also the per-beam timestamp fix in ros_gz_application/nodes/
+    # See also the per-beam timestamp fix in gregor_application/nodes/
     # lidar3d.py and the matching `time_increment` / `scan_time` /
     # header.stamp fix in src/sensors/ldlidar/src/lipkg.cpp.
     sweep_period_s: 0.5    # 40° of tilt per cloud, 40°/s servo speed

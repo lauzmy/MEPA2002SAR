@@ -18,7 +18,7 @@ from sensor_msgs.msg import Image
 from ament_index_python.packages import get_package_share_directory
 
 # project
-from ros_gz_application.yolo_common import FpsLimiter, FpsTracker, draw_fps_overlay, ensure_ncnn
+from gregor_application.yolo_common import FpsLimiter, FpsTracker, draw_fps_overlay, ensure_ncnn
 
 OUTPUT_TOPIC = '/yolo_coco/debug_image'
 ENCODING = 'bgr8'
@@ -30,7 +30,7 @@ class YoloGstreamerNode(Node):
         super().__init__('yolo_gstreamer_node')
 
         # --- Parameters ---
-        default_model = os.path.join(get_package_share_directory('ros_gz_application'), 'yolo26n.pt')
+        default_model = os.path.join(get_package_share_directory('gregor_application'), 'yolo26n.pt')
         self.declare_parameter('model_path', default_model)
         self.declare_parameter('class_ids', [77])  # COCO 0 = person, 77 = teddy bear.
         self.declare_parameter('conf', 0.25)

@@ -27,7 +27,7 @@
   <depend>xacro</depend>
   <depend>robot_state_publisher</depend>
   <depend>ros_gz_bridge</depend>
-  <depend>ros_gz_application</depend>
+  <depend>gregor_application</depend>
   <depend>camera_ros</depend>
   <depend>ldlidar</depend>
   <exec_depend>gregor_description</exec_depend>

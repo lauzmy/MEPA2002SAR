@@ -51,7 +51,7 @@ def generate_launch_description():
 
     # --- Robot nodes ---
     allocator_node = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='allocator',
         name='allocator_node',
         output='screen',
@@ -59,7 +59,7 @@ def generate_launch_description():
     )
 
     imu_node = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='IMU',
         name='imu_node',
         output='screen',
@@ -81,7 +81,7 @@ def generate_launch_description():
     )
 
     thermal_reading_node = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='thermal_reading',
         name='thermal_reading',
         output='screen',
@@ -89,7 +89,7 @@ def generate_launch_description():
     )
 
     thermal_processing_node = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='thermal_processing',
         name='thermal_processing',
         output='screen',
@@ -97,7 +97,7 @@ def generate_launch_description():
     )
 
     collision_avoidance_node = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='collision_avoidance',
         name='collision_avoidance',
         output='screen',
@@ -153,7 +153,7 @@ def generate_launch_description():
 
     # Watches /map updates and pushes the saved map to the remote target when exploration idles out.
     exploration_monitor = Node(
-        package='ros_gz_application',
+        package='gregor_application',
         executable='exploration_monitor',
         name='exploration_monitor',
         output='screen',
