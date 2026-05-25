@@ -14,7 +14,6 @@
   <depend>ros_gz</depend>
   <depend>sdformat_urdf</depend>
   <depend>gregor_sim_description</depend>
-  <depend>gregor_sim_description</depend>
   <depend>rviz2</depend>
   <depend>tf2_ros</depend>
   <depend>slam_toolbox</depend>
