@@ -15,10 +15,12 @@ params:
   time_between_frames_to_warning: 3.0   # [s]
 
   # --- Frame naming (TF publishing) ---
-  vehicle_frame_name: "${MOLA_TF_BASE_LINK|base_link}"
+  vehicle_frame_name: "${MOLA_TF_BASE_LINK|base_footprint}"
   reference_frame_name: "${MOLA_TF_MAP|map}"
 
   # --- Process noise ---
+  # NOTE: MOLA_NAVSTATE_SIGMA_RANDOM_WALK_* env names are shared with state-estimation-simple.yaml
+  # but the tuned defaults differ. Override at your own risk — these are for the smoother only.
   sigma_random_walk_acceleration_linear:  ${MOLA_NAVSTATE_SIGMA_RANDOM_WALK_LINACC|1.0}   # [m/s²]
   sigma_random_walk_acceleration_angular: ${MOLA_NAVSTATE_SIGMA_RANDOM_WALK_ANGACC|10.0}  # [rad/s²]
   sigma_integrator_position:    0.1   # [m]

@@ -93,44 +93,17 @@ if [ -z "${MOLA_ODOMETRY_PIPELINE_YAML:-}" ]; then
 fi
 export MOLA_OPTIMIZE_TWIST="${MOLA_OPTIMIZE_TWIST:-false}"
 
-# Smoother-estimator YAML. Our local override adds `kinematic_model` (the
-# installed smoother YAML omits it). Fall back to bundled if our copy is gone.
-if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ] && \
-   [[ "${MOLA_STATE_ESTIMATOR:-}" == *"StateEstimationSmoother"* ]]; then
-    if [ -f "$SCRIPT_DIR/state-estimation-smoother.yaml" ]; then
-        SMOOTHER_YAML="$SCRIPT_DIR/state-estimation-smoother.yaml"
-    else
-        SMOOTHER_YAML="$MOLA_LO_SHARE/state-estimator-params/state-estimation-smoother.yaml"
-        if [ ! -f "$SMOOTHER_YAML" ]; then
-            SMOOTHER_PREFIX="$(ros2 pkg prefix mola_state_estimation_smoother 2>/dev/null || true)"
-            if [ -n "$SMOOTHER_PREFIX" ] && \
-               [ -f "$SMOOTHER_PREFIX/share/mola_state_estimation_smoother/params/state-estimation-smoother.yaml" ]; then
-                SMOOTHER_YAML="$SMOOTHER_PREFIX/share/mola_state_estimation_smoother/params/state-estimation-smoother.yaml"
-            fi
-        fi
-    fi
-    if [ -f "$SMOOTHER_YAML" ]; then
-        export MOLA_STATE_ESTIMATOR_YAML="$SMOOTHER_YAML"
-    else
-        echo "Warning: state-estimation-smoother.yaml not found; smoother will use C++ defaults." >&2
-    fi
-fi
-
-# Simple-estimator YAML (when smoother not selected). Search common install paths.
+# Estimator-params YAML — always installed alongside this script by gregor_bringup.
 if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ]; then
-    SIMPLE_CANDIDATES=(
-        "$SCRIPT_DIR/state-estimation-simple.yaml"
-        "$MOLA_LO_SHARE/state-estimator-params/state-estimation-simple.yaml"
-        "$(ros2 pkg prefix mola_state_estimation_simple 2>/dev/null || true)/share/mola_state_estimation_simple/params/state-estimation-simple.yaml"
-    )
-    for c in "${SIMPLE_CANDIDATES[@]}"; do
-        if [ -n "$c" ] && [ -f "$c" ]; then
-            export MOLA_STATE_ESTIMATOR_YAML="$c"
-            break
-        fi
-    done
-    if [ -z "${MOLA_STATE_ESTIMATOR_YAML:-}" ]; then
-        echo "Warning: state-estimation-simple.yaml not found; using C++ defaults." >&2
+    if [[ "${MOLA_STATE_ESTIMATOR:-}" == *"StateEstimationSmoother"* ]]; then
+        EST_YAML="$SCRIPT_DIR/state-estimation-smoother.yaml"
+    else
+        EST_YAML="$SCRIPT_DIR/state-estimation-simple.yaml"
+    fi
+    if [ -f "$EST_YAML" ]; then
+        export MOLA_STATE_ESTIMATOR_YAML="$EST_YAML"
+    else
+        echo "Warning: $EST_YAML not found; estimator will use C++ defaults." >&2
     fi
 fi
 
@@ -142,13 +115,12 @@ fi
 
 # Expected bag duration (best-effort, for the [mola-map] info banner only).
 BAG_DURATION_SEC=""
-META_YAML=""
 if [ -d "$BAG" ]; then
     META_YAML="$BAG/metadata.yaml"
-elif [ -f "${BAG%.mcap}/../metadata.yaml" ]; then
+else
     META_YAML="$(dirname "$BAG")/metadata.yaml"
 fi
-if [ -n "$META_YAML" ] && [ -f "$META_YAML" ]; then
+if [ -f "$META_YAML" ]; then
     BAG_NS=$(grep -A1 '^ *duration:' "$META_YAML" | grep 'nanoseconds:' | head -1 | awk '{print $2}' || true)
     if [ -n "$BAG_NS" ] && [ "$BAG_NS" -gt 0 ] 2>/dev/null; then
         TIME_WARP="${MOLA_TIME_WARP:-1.0}"

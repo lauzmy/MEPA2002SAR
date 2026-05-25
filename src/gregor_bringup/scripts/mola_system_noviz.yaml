@@ -1,5 +1,7 @@
 # Headless variant of mola_system.yaml (no MolaViz module).
 # Used when --noviz is passed to mola-map.sh; isolates GUI render crashes from pipeline crashes.
+# KEEP IN SYNC with mola_system.yaml — any change there (modules, env-var defaults, sensor block)
+# must mirror here, minus the `viz` module and the `gui_preview_sensors` block.
 
 modules:
   - name: lidar_odom
@@ -26,7 +28,7 @@ modules:
       time_warp_scale: ${MOLA_TIME_WARP|1.0}
       start_paused: ${MOLA_DATASET_START_PAUSED|false}
 
-      base_link_frame_id: "${MOLA_TF_BASE_LINK|base_link}"
+      base_link_frame_id: "${MOLA_TF_BASE_LINK|base_footprint}"
       tf_topic: "${MOLA_TF_TOPIC|/tf}"
       tf_static_topic: "${MOLA_TF_STATIC_TOPIC|/tf_static}"
 

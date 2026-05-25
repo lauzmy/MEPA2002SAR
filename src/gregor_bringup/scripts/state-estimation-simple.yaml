@@ -11,9 +11,9 @@ params:
   sigma_random_walk_acceleration_angular: ${MOLA_NAVSTATE_SIGMA_RANDOM_WALK_ANGACC|0.25}   # [rad/s²]
 
   # Relative-pose noise. Linear stays loose (mecanum lateral slip);
-  # angular at 0.06 rad balances ICP authority vs map-twist symptom.
+  # angular at 0.03 rad — see wiki: MolaLo/SparseLD06-Tuning.
   sigma_relative_pose_linear:  ${MOLA_NAVSTATE_SIGMA_REL_POSE_LIN|0.20}   # [m]
-  sigma_relative_pose_angular: ${MOLA_NAVSTATE_SIGMA_REL_POSE_ANG|0.06}   # [rad]
+  sigma_relative_pose_angular: ${MOLA_NAVSTATE_SIGMA_REL_POSE_ANG|0.03}   # [rad]
 
   sigma_imu_angular_velocity: 0.05  # unused — no IMU registered
 
