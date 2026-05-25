@@ -6,35 +6,35 @@
 
 #include <Arduino.h>
 
-// ── pins ─────────────────────────────────────────────────────────────────────
+// --- Pins ---
 #define PWM_PIN     8
 #define PIN_WIPER   2
 #define PIN_GND     0
 #define PIN_VCC     4
 #define UART_TX_PIN 20
 
-// ── PWM ──────────────────────────────────────────────────────────────────────
+// --- PWM ---
 #define PWM_FREQ    1000
 #define PWM_RES     12
 
-// ── UART ─────────────────────────────────────────────────────────────────────
+// --- UART ---
 #define UART_BAUD   921600
 #define SYNC_BYTE   0xAA
 
-// ── sampling / filter ────────────────────────────────────────────────────────
+// --- Sampling / filter ---
 #define SAMPLE_N        32       // samples per trimmed-mean batch
 #define TRIM_EACH_SIDE  4        // drop N lowest + N highest
-#define EMA_ALPHA_Q15   6554     // 0.20 * 32768  (exponential smoothing)
+#define EMA_ALPHA_Q15   6554     // 0.20 * 32768 (exponential smoothing in Q15)
 #define OUTPUT_HZ       200      // fixed packet rate
 #define CAL_INTERVAL_MS 5000     // re-calibrate refs every 5 s
 #define CAL_SAMPLES     256      // averaging count for ref cal
 
-// ── packet (little-endian) ───────────────────────────────────────────────────
-// [0]      sync 0xAA
-// [1]      seq  (u8, wraps)
-// [2..3]   angle in centi-degrees (i16)  e.g. 12345 = 123.45°
-// [4..5]   wiper millivolts (u16)
-// [6]      crc8 over bytes 1..5
+// --- Packet (little-endian, 7 bytes; must match lidar3d.py UartAngleReader) ---
+// [0]    sync   0xAA
+// [1]    seq    uint8 (wraps)
+// [2..3] angle  int16, centi-degrees (e.g. 12345 = 123.45°)
+// [4..5] wiper  uint16, millivolts
+// [6]    crc8   poly 0x07, init 0x00, over bytes 1..5
 struct __attribute__((packed)) Packet {
     uint8_t  sync;
     uint8_t  seq;
@@ -43,7 +43,7 @@ struct __attribute__((packed)) Packet {
     uint8_t  crc;
 };
 
-// ── state ────────────────────────────────────────────────────────────────────
+// --- State ---
 static uint16_t refGndMv = 0;
 static uint16_t refVccMv = 3300;
 static int32_t  emaQ15   = 0;
@@ -53,7 +53,8 @@ static uint32_t lastCalMs    = 0;
 static uint32_t nextSendUs   = 0;
 static const uint32_t SEND_PERIOD_US = 1000000UL / OUTPUT_HZ;
 
-// ── CRC8 (poly 0x07, init 0x00) ──────────────────────────────────────────────
+// --- CRC8 (poly 0x07, init 0x00) ---
+
 static uint8_t crc8(const uint8_t *data, size_t len) {
     uint8_t c = 0;
     while (len--) {
@@ -64,12 +65,12 @@ static uint8_t crc8(const uint8_t *data, size_t len) {
     return c;
 }
 
-// ── ADC helpers ──────────────────────────────────────────────────────────────
+// --- ADC helpers ---
+
 static int cmpU16(const void *a, const void *b) {
     return (int)(*(const uint16_t*)a) - (int)(*(const uint16_t*)b);
 }
 
-// trimmed-mean of SAMPLE_N millivolt readings on a pin
 static uint16_t readTrimmedMeanMv(uint8_t pin) {
     uint16_t buf[SAMPLE_N];
     for (uint8_t i = 0; i < SAMPLE_N; i++) {
@@ -81,7 +82,6 @@ static uint16_t readTrimmedMeanMv(uint8_t pin) {
     return (uint16_t)(sum / (SAMPLE_N - 2 * TRIM_EACH_SIDE));
 }
 
-// heavy averaging for reference pins
 static uint16_t calibrateRef(uint8_t pin) {
     uint32_t sum = 0;
     for (uint16_t i = 0; i < CAL_SAMPLES; i++)
@@ -95,7 +95,8 @@ static void recalibrateRefs() {
     if (refVccMv <= refGndMv) refVccMv = refGndMv + 1;  // guard div/0
 }
 
-// ── setup ────────────────────────────────────────────────────────────────────
+// --- Setup ---
+
 void setup() {
     Serial.begin(115200);
     Serial1.begin(UART_BAUD, SERIAL_8N1, -1, UART_TX_PIN);
@@ -116,19 +117,18 @@ void setup() {
                   refGndMv, refVccMv, UART_BAUD, OUTPUT_HZ);
 }
 
-// ── loop ─────────────────────────────────────────────────────────────────────
+// --- Main loop ---
+
 void loop() {
-    // periodic ref recalibration
     uint32_t nowMs = millis();
     if (nowMs - lastCalMs >= CAL_INTERVAL_MS) {
         recalibrateRefs();
         lastCalMs = nowMs;
     }
 
-    // sample wiper (trimmed mean)
     uint16_t wiperMv = readTrimmedMeanMv(PIN_WIPER);
 
-    // EMA smoothing
+    // EMA smoothing in Q15.
     if (!emaInit) { emaQ15 = (int32_t)wiperMv << 15; emaInit = true; }
     else {
         int32_t target = (int32_t)wiperMv << 15;
@@ -136,18 +136,17 @@ void loop() {
     }
     int32_t smoothMv = emaQ15 >> 15;
 
-    // map to angle (centi-degrees, 0..27000)
+    // Map wiper voltage to angle in centi-degrees (0..27000 = 0..270°).
     int32_t span = (int32_t)refVccMv - (int32_t)refGndMv;
     int32_t rel  = smoothMv - (int32_t)refGndMv;
     if (rel < 0)    rel = 0;
     if (rel > span) rel = span;
     int16_t angle_cdeg = (int16_t)((rel * 27000) / span);
 
-    // PWM output
     int duty = (int)((rel * 4095) / span);
     ledcWrite(PWM_PIN, duty);
 
-    // fixed-rate transmit
+    // Fixed-rate transmit (signed cast handles uint32_t wraparound).
     uint32_t nowUs = micros();
     if ((int32_t)(nowUs - nextSendUs) >= 0) {
         nextSendUs += SEND_PERIOD_US;
