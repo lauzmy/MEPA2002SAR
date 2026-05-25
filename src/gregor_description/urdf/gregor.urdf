@@ -1,21 +1,11 @@
 <?xml version='1.0' encoding='utf-8'?>
 <robot name="gregor" xmlns:gz="http://gazebosim.org/schema">
     <link name="base_footprint"/>
+    <!-- +π/2 yaw aligns Fusion's base_link axes with REP-103 so the
+         MecanumDrive plugin's IK matches physics. See wiki: Hardware-Robot-Model. -->
     <joint name="base_footprint_to_base_link" type="fixed">
         <parent link="base_footprint"/>
         <child link="base_link"/>
-        <!-- The Fusion export of base_link is rotated 90° relative to ROS
-             REP-103 (+X forward, +Y left). Without this yaw the wheel joint
-             axes end up along base_link +X, so all wheels roll along
-             base_link ±Y instead of ±X. The MecanumDrive plugin assumes
-             wheels roll along the model-frame X axis, so the IK matrix is
-             rotated 90° from reality — forward/strafe can be patched up by
-             tweaking fdir1, but pure rotation cancels to zero net torque
-             and diagonal motion is wrong. Rotating base_link here aligns
-             the wheel rolling axis with footprint +X so the plugin's IK
-             matches physics. After this rotation the Fusion link names
-             (fl/fr/rl/rr) match the physical wheel positions — see the
-             plugin block below for the (now trivial) wiring. -->
         <origin xyz="0 0 0.025" rpy="0 0 1.5708"/>
     </joint>
 

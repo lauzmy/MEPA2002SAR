@@ -15,7 +15,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32
 
-# --- Protocol (must match ESP32 firmware) ---
+# --- Protocol (must match ESP32 firmware). See wiki: Allocator/Protocol. ---
 SERIAL_START_BYTE = 0x55
 MOTOR_CMD_BYTE = 0x01
 ESP32_PACKET_SIZE = 8

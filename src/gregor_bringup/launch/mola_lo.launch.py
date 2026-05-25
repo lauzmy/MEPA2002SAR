@@ -63,6 +63,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'base_link_frame', default_value='base_footprint',
             description='REP-105 base frame anchored by the EKF.'),
+        # See wiki: MolaLo/Smoother-vs-Simple.
         DeclareLaunchArgument(
             'use_smoother', default_value='False',
             description='If true, use the Smoother state estimator '
@@ -87,6 +88,7 @@ def generate_launch_description():
     simple_yaml = os.path.join(bringup_scripts, 'state-estimation-simple.yaml')
     smoother_yaml = os.path.join(bringup_scripts, 'state-estimation-smoother.yaml')
 
+    # See wiki: MolaLo/Pipelines for why lidar3d-default over lidar3d-gicp-optimize-twist.
     pipeline_yaml = os.path.join(
         pkg_mola_lo, 'pipelines', 'lidar3d-default.yaml')
 
