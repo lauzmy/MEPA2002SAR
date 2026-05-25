@@ -9,7 +9,6 @@ import time
 
 # third-party
 import cv2
-from cv_bridge import CvBridge
 from ultralytics import YOLO
 
 # ROS
@@ -33,7 +32,7 @@ class YoloGstreamerNode(Node):
         # --- Parameters ---
         default_model = os.path.join(get_package_share_directory('ros_gz_application'), 'yolo26n.pt')
         self.declare_parameter('model_path', default_model)
-        self.declare_parameter('class_ids', [0])  # COCO 0 = person, 77 = teddy bear.
+        self.declare_parameter('class_ids', [77])  # COCO 0 = person, 77 = teddy bear.
         self.declare_parameter('conf', 0.25)
         self.declare_parameter('imgsz', 640)
         self.declare_parameter('fps_limit', 0.0)  # 0.0 disables the limit.
@@ -53,7 +52,8 @@ class YoloGstreamerNode(Node):
         self._fps = FpsTracker(time.monotonic())
 
         # --- ROS interface ---
-        self._bridge = CvBridge()
+        # Manual Image construction (no CvBridge) — sidesteps a numpy/cv_bridge ABI
+        # crash on this deployment. See wiki: YOLO/CvBridgeWorkaround.
         self._image_pub = self.create_publisher(Image, OUTPUT_TOPIC, 10)
 
         # --- Worker thread ---
@@ -91,8 +91,15 @@ class YoloGstreamerNode(Node):
                 self._fps.update(now_s)
                 draw_fps_overlay(annotated, self._fps.current_fps)
 
-                msg = self._bridge.cv2_to_imgmsg(annotated, encoding=ENCODING)
+                msg = Image()
                 msg.header.stamp = self.get_clock().now().to_msg()
+                msg.header.frame_id = 'camera_link'
+                msg.height = annotated.shape[0]
+                msg.width = annotated.shape[1]
+                msg.encoding = ENCODING
+                msg.is_bigendian = False
+                msg.step = 3 * annotated.shape[1]
+                msg.data = annotated.tobytes()
                 self._image_pub.publish(msg)
         finally:
             cap.release()

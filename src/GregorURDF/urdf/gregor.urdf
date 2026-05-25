@@ -343,13 +343,12 @@
         <parent link="base_link" />
         <child link="upper_level_link" />
     </joint>
-    <joint name="Upper-Level_Revolute-3" type="revolute">
-        <!-- Pure Z hinge above upper_level_link.
-             rpy yaw = +π/2 cancels upper_level_link's -π/2 yaw,
-             so the child frame is aligned with base_link at tilt=0.
-             Axis (1,0,0) in this (now base-aligned) frame = base_link X,
-             giving front/back tilt of the laser. -->
-        <origin xyz="0 0 0.08375145" rpy="0 0 1.5707963267948966" />
+    <!-- Fixed: lidar3d.py bakes per-beam tilt into the published cloud
+         (output_frame=base_link), so RSP must NOT apply tilt to the TF.
+         If the servo is ever re-enabled at the TF layer, switch to
+         type="revolute" and have lidar3d.py publish in the laser frame. -->
+    <joint name="Upper-Level_Revolute-3" type="fixed">
+        <origin xyz="4.479000000000011e-05 -3.5119999999999996e-05 0.08375145" rpy="-1.6930901125533616e-15 -1.5707963267948966 0" />
         <parent link="upper_level_link" />
         <child link="lidar_mount_link" />
         <axis xyz="1 0 0" />

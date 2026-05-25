@@ -9,6 +9,6 @@ explore_node:
     potential_scale: 3.0
     gain_scale: 1.0
     orientation_scale: 0.0
-    transform_tolerance: 0.3
+    transform_tolerance: 0.4
     min_frontier_size: 0.5
     use_sim_time: true

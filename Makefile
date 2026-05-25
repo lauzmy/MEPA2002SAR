@@ -59,6 +59,7 @@ x11:
 
 ros_build:
 	colcon build --cmake-clean-cache --cmake-args -DBUILD_TESTING=ON
+	source install/setup.bash
 
 ros_clean:
 	rm -rf build install log

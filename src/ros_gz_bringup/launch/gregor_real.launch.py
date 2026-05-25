@@ -96,6 +96,14 @@ def generate_launch_description():
         parameters=[{'use_sim_time': False}],
     )
 
+    collision_avoidance_node = Node(
+        package='ros_gz_application',
+        executable='collision_avoidance',
+        name='collision_avoidance',
+        output='screen',
+        parameters=[{'use_sim_time': False}],
+    )
+
     # --- Localization & autonomy ---
     ekf_node = Node(
         package='robot_localization',
@@ -115,10 +123,15 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('slam')),
     )
 
+    # Delay Nav2 startup so SLAM has time to publish the initial map before the costmap stack reads it.
     nav2_params = os.path.join(pkg_bringup, 'config', 'IRL', 'nav2_params_smac2D.yaml')
-    nav2 = IncludeLaunchDescription(
+    nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(pkg_nav2_bringup, 'launch', 'navigation_launch.py')),
         launch_arguments={'use_sim_time': 'False', 'params_file': nav2_params}.items(),
+    )
+    nav2 = TimerAction(
+        period=5.0,
+        actions=[nav2_launch],
         condition=IfCondition(LaunchConfiguration('nav2')),
     )
 
@@ -136,6 +149,22 @@ def generate_launch_description():
             ],
         )],
         condition=IfCondition(LaunchConfiguration('explore')),
+    )
+
+    # Watches /map updates and pushes the saved map to the remote target when exploration idles out.
+    exploration_monitor = Node(
+        package='ros_gz_application',
+        executable='exploration_monitor',
+        name='exploration_monitor',
+        output='screen',
+        parameters=[{
+            'use_sim_time': False,
+            'maps_root': '/home/ubuntu/ros2_ws/maps',
+            'map_name': 'gregor_map',
+            'idle_timeout': 15.0,
+            'startup_grace': 30.0,
+            'push_script': '/home/ubuntu/push_map.sh',
+        }],
     )
 
     rviz = Node(
@@ -166,12 +195,14 @@ def generate_launch_description():
         imu_node,
         allocator_node,
         ldlidar_node,
+        collision_avoidance_node,
         thermal_reading_node,
         thermal_processing_node,
         ekf_node,
         slam,
         nav2,
         explore,
+        exploration_monitor,
         rviz,
         ready_message,
     ])

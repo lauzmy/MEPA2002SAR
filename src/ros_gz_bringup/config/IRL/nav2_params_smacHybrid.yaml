@@ -7,7 +7,7 @@ bt_navigator:
     global_frame: map
     robot_base_frame: base_footprint
     odom_topic: /odometry/filtered
-    bt_loop_duration: 10
+    bt_loop_duration: 20
     default_server_timeout: 20
 
     # Behavior tree XML (use default Nav2 behavior trees with absolute paths)
@@ -17,11 +17,11 @@ bt_navigator:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 10.0
+    controller_frequency: 15.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.01
     min_theta_velocity_threshold: 0.00
-    failure_tolerance: 0.3
+    failure_tolerance: 1.0
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
@@ -61,12 +61,12 @@ controller_server:
       decel_lim_theta: -3.0
 
       # Path/goal tolerances
-      vx_samples: 20
-      vy_samples: 10  # Keep some lateral options, reduce wobble
-      vtheta_samples: 24
+      vx_samples: 12
+      vy_samples: 6  # Keep some lateral options, reduce wobble
+      vtheta_samples: 16
       # sim_time: How far ahead (seconds) to simulate trajectories
       # Balance: too short = cuts corners, too long = gets stuck on distant obstacles
-      sim_time: 1.0
+      sim_time: 0.7
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.5
@@ -100,7 +100,7 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 10.0   # Reduced from 5.0 to lower CPU load
+      update_frequency: 5.0   # Reduced from 5.0 to lower CPU load
       publish_frequency: 1.0  # Reduced from 2.0
       global_frame: odom
       robot_base_frame: base_footprint
@@ -110,21 +110,21 @@ local_costmap:
       height: 3
       resolution: 0.05
       # Robot footprint: 220mm x 180mm = 0.22m x 0.18m
-      footprint: "[[0.11, 0.09], [0.11, -0.09], [-0.11, -0.09], [-0.11, 0.09]]"
+      footprint: "[[0.13, 0.10], [0.13, -0.10], [-0.13, -0.10], [-0.13, 0.10]]"
       footprint_padding: 0.02
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 6.0
+        cost_scaling_factor: 3.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.35
+        inflation_radius: 0.20
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
-        publish_voxel_map: True
+        publish_voxel_map: false
         origin_z: 0.0
         z_resolution: 0.05
         z_voxels: 16
@@ -153,7 +153,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      footprint: "[[0.11, 0.09], [0.11, -0.09], [-0.11, -0.09], [-0.11, 0.09]]"
+      footprint: "[[0.13, 0.10], [0.13, -0.10], [-0.13, -0.10], [-0.13, 0.10]]"
       footprint_padding: 0.02
       resolution: 0.05
       track_unknown_space: true
@@ -179,10 +179,10 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         # cost_scaling_factor: How quickly cost drops off from obstacles
         # Lower = costs stay high further from obstacles = more cautious
-        cost_scaling_factor: 6.0
+        cost_scaling_factor: 3.0
         # inflation_radius: How far from obstacles to inflate costs
         # robot_radius (0.15) + clearance (0.35) = 0.50m
-        inflation_radius: 0.35
+        inflation_radius: 0.20
       always_send_full_costmap: True
 
 map_server:
@@ -206,12 +206,12 @@ planner_server:
       plugin: "nav2_smac_planner::SmacPlannerHybrid"  # In Iron and older versions, "/" was used instead of "::"
       downsample_costmap: false                       # whether or not to downsample the map
       downsampling_factor: 1                          # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
-      tolerance: 0.15hv                                 # dist-to-goal heuristic cost (distance) for valid tolerance endpoints if exact goal cannot be found.
+      tolerance: 0.15                                 # dist-to-goal heuristic cost (distance) for valid tolerance endpoints if exact goal cannot be found.
       allow_unknown: true                             # allow traveling in unknown space
       max_iterations: 1000000                         # maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
       max_on_approach_iterations: 1000                # Maximum number of iterations after within tolerances to continue to try to find exact solution
       max_planning_time: 5.0                          # max time in s for planner to plan, smooth
-      motion_model_for_search: "REDDS_SHEPP"          # Hybrid-A* DUBIN, REDDS_SHEPP
+      motion_model_for_search: "REEDS_SHEPP"          # Hybrid-A* DUBIN, REDDS_SHEPP
       angle_quantization_bins: 72                     # Number of angle bins for search
       analytic_expansion_ratio: 3.5                   # The ratio to attempt analytic expansions during search for final approach.
       analytic_expansion_max_length: 3.0              # For Hybrid/Lattice nodes: The maximum length of the analytic expansion to be considered valid to prevent unsafe shortcutting
@@ -267,7 +267,7 @@ behavior_server:
       plugin: "nav2_behaviors::Wait"
     global_frame: odom
     robot_base_frame: base_footprint
-    transform_tolerance: 0.1
+    transform_tolerance: 0.5
     use_sim_time: False
 
 robot_state_publisher:
@@ -306,19 +306,42 @@ collision_monitor:
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
     cmd_vel_out_topic: "/cmd_vel"
-    transform_tolerance: 0.2
+    transform_tolerance: 0.5
     source_timeout: 1.0
     stop_pub_timeout: 2.0
-    observation_sources: ["scan"]
+    observation_sources: ["scan", "front_ir", "rear_ir", "left_ir", "right_ir"]
     scan:
       type: "scan"
       topic: "/scan"
       enabled: True
+      obstacles_angle: 0.2 
+    front_ir:
+      type: "range"
+      topic: "/ir/front"
+      enabled: False  # Front IR is very noisy, disable for now
+      obstacles_angle: 0.2
+    rear_ir:
+      type: "range"
+      topic: "/ir/rear"
+      enabled: False  # Rear IR is very noisy, disable for now
+      obstacles_angle: 0.2
+    left_ir:
+      type: "range"
+      topic: "/ir/left"
+      enabled: False  # Left IR is very noisy, disable for now
+      obstacles_angle: 0.2
+    right_ir:
+      type: "range"
+      topic: "/ir/right"
+      enabled: False  # Right IR is very noisy, disable for now
+      obstacles_angle: 0.2
     polygons: ["slowdown_polygon"]
     slowdown_polygon:
       type: "polygon"
-      points: "[[0.20, 0.20], [0.20, -0.20], [-0.20, -0.20], [-0.20, 0.20]]"
+      points: "[[0.15, 0.12], [0.15, -0.12], [-0.15, -0.12], [-0.15, 0.12]]"
       action_type: "slowdown"
+      min_point: 2
+      slowdown_factor: 0.3
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
 
@@ -377,6 +400,10 @@ local_costmap_rclcpp_node:
 global_costmap_rclcpp_node:
   ros__parameters:
     use_sim_time: False
+
+
+
+
 
 
 

@@ -57,6 +57,7 @@ class ThermalProcessing(Node):
             self._heat_info_pub.publish(String(
                 data=f'max={max_temp_c:.2f}, min={min_temp_c:.2f}, avg={avg_temp_c:.2f}, x={x}, y={y}'
             ))
+            self.get_logger().info(f'Hottest point: {max_temp_c:.2f} C at ({x}, {y})')
 
         if self._image_pub.get_subscription_count() > 0:
             scaled = np.clip((temp_c - self._display_min_c) / (self._display_max_c - self._display_min_c), 0.0, 1.0)

@@ -7,7 +7,7 @@ bt_navigator:
     global_frame: map
     robot_base_frame: base_footprint
     odom_topic: /odometry/filtered
-    bt_loop_duration: 10
+    bt_loop_duration: 20
     default_server_timeout: 20
 
     # Behavior tree XML (use default Nav2 behavior trees with absolute paths)
@@ -17,7 +17,7 @@ bt_navigator:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 20.0
+    controller_frequency: 15.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.01
     min_theta_velocity_threshold: 0.00
@@ -110,7 +110,7 @@ local_costmap:
       height: 3
       resolution: 0.05
       # Robot footprint: 220mm x 180mm = 0.22m x 0.18m
-      footprint: "[[0.11, 0.09], [0.11, -0.09], [-0.11, -0.09], [-0.11, 0.09]]"
+      footprint: "[[0.13, 0.10], [0.13, -0.10], [-0.13, -0.10], [-0.13, 0.10]]"
       footprint_padding: 0.02
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
@@ -153,7 +153,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      footprint: "[[0.11, 0.09], [0.11, -0.09], [-0.11, -0.09], [-0.11, 0.09]]"
+      footprint: "[[0.13, 0.10], [0.13, -0.10], [-0.13, -0.10], [-0.13, 0.10]]"
       footprint_padding: 0.02
       resolution: 0.05
       track_unknown_space: true
@@ -200,7 +200,7 @@ map_saver:
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 20.0
+    expected_planner_frequency: 5.0
     use_sim_time: False
     planner_plugins: ["GridBased"]
 
@@ -210,9 +210,9 @@ planner_server:
       downsample_costmap: false             # whether or not to downsample the map
       downsampling_factor: 1                # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
       allow_unknown: true                   # allow traveling in unknown space
-      max_iterations: 1000000               # maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
+      max_iterations: 500000               # maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
       max_on_approach_iterations: 1000      # maximum number of iterations to attempt to reach goal once in tolerance
-      max_planning_time: 2.0                # max time in s for planner to plan, smooth
+      max_planning_time: 1.0                # max time in s for planner to plan, smooth
       cost_travel_multiplier: 2.0           # Cost multiplier to apply to search to steer away from high cost areas. Larger values will place in the center of aisles more exactly (if non-`FREE` cost potential field exists) but take slightly longer to compute. To optimize for speed, a value of 1.0 is reasonable. A reasonable tradeoff value is 2.0. A value of 0.0 effective disables steering away from obstacles and acts like a naive binary search A*.
       use_final_approach_orientation: false # Whether to set the final path pose at the goal's orientation to the requested orientation (false) or in line with the approach angle so the robot doesn't rotate to heading (true)
       smoother:
@@ -247,7 +247,7 @@ behavior_server:
       plugin: "nav2_behaviors::Wait"
     global_frame: odom
     robot_base_frame: base_footprint
-    transform_tolerance: 0.1
+    transform_tolerance: 0.5
     use_sim_time: False
 
 robot_state_publisher:
@@ -286,19 +286,42 @@ collision_monitor:
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
     cmd_vel_out_topic: "/cmd_vel"
-    transform_tolerance: 0.2
+    transform_tolerance: 0.5
     source_timeout: 1.0
     stop_pub_timeout: 2.0
-    observation_sources: ["scan"]
+    observation_sources: ["scan", "front_ir", "rear_ir", "left_ir", "right_ir"]
     scan:
       type: "scan"
       topic: "/scan"
       enabled: True
+      obstacles_angle: 0.2 
+    front_ir:
+      type: "range"
+      topic: "/ir/front"
+      enabled: True  # Front IR is very noisy, disable for now
+      obstacles_angle: 0.2
+    rear_ir:
+      type: "range"
+      topic: "/ir/rear"
+      enabled: True  # Rear IR is very noisy, disable for now
+      obstacles_angle: 0.2
+    left_ir:
+      type: "range"
+      topic: "/ir/left"
+      enabled: True  # Left IR is very noisy, disable for now
+      obstacles_angle: 0.2
+    right_ir:
+      type: "range"
+      topic: "/ir/right"
+      enabled: True  # Right IR is very noisy, disable for now
+      obstacles_angle: 0.2
     polygons: ["slowdown_polygon"]
     slowdown_polygon:
       type: "polygon"
-      points: "[[0.13, 0.11], [0.13, -0.11], [-0.13, -0.11], [-0.13, 0.11]]"  # 26cm x 22cm rectangle around robot
+      points: "[[0.18, 0.17], [0.18, -0.17], [-0.18, -0.17], [-0.18, 0.17]]"
       action_type: "slowdown"
+      min_point: 1
+      slowdown_factor: 0.3
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
 

@@ -46,3 +46,8 @@ log/
 *.exe
 *.out
 *.app
+
+maps/
+*.pgm
+*.posegraph
+*.data

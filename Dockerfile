@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV GZ_VERSION=harmonic
 ENV ROS_DOMAIN_ID=73
 # 'Pi, Lauritz, Groven, Emma, Julie' Tailscale IPs.
-ENV ROS_STATIC_PEERS='100.110.188.124;100.65.35.124;100.104.108.87;100.110.49.100;100.125.96.77' 
+ENV ROS_STATIC_PEERS='100.110.188.124;100.65.35.124;100.104.108.87;100.110.49.100;100.125.96.77'
 ARG USERNAME=ubuntu
 ARG USER_UID=1000
 ARG USER_GID=1000
@@ -36,12 +36,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-nav2-bringup \
     ros-jazzy-mola \
     ros-jazzy-mola-state-estimation \
-     ros-jazzy-mola-lidar-odometry \
+    ros-jazzy-mola-lidar-odometry \
     ros-jazzy-octomap-server \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages adafruit-circuitpython-bno08x adafruit-extended-bus rpi-lgpio rpi_hardware_pwm
-
+RUN pip3 install --break-system-packages \
+    adafruit-circuitpython-bno08x \
+    adafruit-extended-bus \
+    rpi-lgpio \
+    rpi_hardware_pwm
+    
 # Create a development user that matches the host UID/GID.
 RUN set -eux; \
     if getent group "${USERNAME}" >/dev/null; then \
