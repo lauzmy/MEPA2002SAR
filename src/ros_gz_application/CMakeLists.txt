@@ -8,11 +8,6 @@ find_package(ament_cmake_python REQUIRED)
 ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
-	launch/cmd_vel_publisher.py
-	DESTINATION lib/${PROJECT_NAME}
-)
-
-install(PROGRAMS
 	nodes/lidar3d.py
 	DESTINATION lib/${PROJECT_NAME}
 	RENAME lidar3d
