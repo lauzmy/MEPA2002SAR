@@ -99,8 +99,8 @@ def generate_launch_description():
 
 def _sim_branch(pkg_bringup, pkg_description, config_file, enable_mola):
     pkg_ros_gz_sim     = get_package_share_directory('ros_gz_sim')
-    pkg_example_gazebo = get_package_share_directory('ros_gz_gazebo')
-    pkg_ros_gz_desc    = get_package_share_directory('ros_gz_description')
+    pkg_example_gazebo = get_package_share_directory('gregor_sim_description')
+    pkg_ros_gz_desc    = get_package_share_directory('gregor_sim_description')
 
     discovery_range = SetEnvironmentVariable('ROS_AUTOMATIC_DISCOVERY_RANGE', 'LOCALHOST')
 

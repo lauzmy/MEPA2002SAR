@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.5)
 project(gregor_bringup)
 
 find_package(ament_cmake REQUIRED)
-find_package(ros_gz_description REQUIRED)
-find_package(ros_gz_gazebo REQUIRED)
+find_package(gregor_sim_description REQUIRED)
+find_package(gregor_sim_description REQUIRED)
 
 # Install project launch files
 install(
