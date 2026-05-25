@@ -56,7 +56,7 @@ class ThermalProcessing(Node):
         self.heat_info_pub.publish(info)
         
         # log to console
-        self.get_logger().info(f"Hottest point: {max_temp:.2f} C at ({x}, {y})")
+        # self.get_logger().info(f"Hottest point: {max_temp:.2f} C at ({x}, {y})")
 
         # scale to 15 - 45 degrees for visualization
         scaled = (temp - self.display_min_c) / (self.display_max_c - self.display_min_c)
