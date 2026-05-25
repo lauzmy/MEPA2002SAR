@@ -1,132 +1,118 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-from ultralytics import YOLO
-import cv2
+"""YOLO object detection on a GStreamer camera stream, publishes annotated frames on /yolo_coco/debug_image."""
+
+# --- Imports ---
+# stdlib
 import os
 import threading
 import time
+
+# third-party
+import cv2
+from cv_bridge import CvBridge
+from ultralytics import YOLO
+
+# ROS
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image
 from ament_index_python.packages import get_package_share_directory
+
+# project
+from ros_gz_application.yolo_common import FpsLimiter, FpsTracker, draw_fps_overlay, ensure_ncnn
+
+OUTPUT_TOPIC = '/yolo_coco/debug_image'
+ENCODING = 'bgr8'
+DEFAULT_PIPELINE = 'v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink drop=true max-buffers=1'
+
 
 class YoloGstreamerNode(Node):
     def __init__(self):
-        super().__init__("yolo_gstreamer_node")
-        pkg_dir = get_package_share_directory('ros_gz_application')
-        default_pt_model = os.path.join(pkg_dir, 'yolo26n.pt')
+        super().__init__('yolo_gstreamer_node')
 
-        # Oppsett av parametere
-        self.declare_parameter("model_path", default_pt_model)
-        self.declare_parameter("class_ids", [0])
-        self.declare_parameter("conf", 0.25)
-        self.declare_parameter("imgsz", 640)
-        self.declare_parameter("fps_limit", 0.0)
-        
-        # GStreamer pipeline for å hente video (Standard er USB-kamera på Linux)
-        default_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink drop=true max-buffers=1"
-        self.declare_parameter("gstreamer_pipeline", default_pipeline)
+        # --- Parameters ---
+        default_model = os.path.join(get_package_share_directory('ros_gz_application'), 'yolo26n.pt')
+        self.declare_parameter('model_path', default_model)
+        self.declare_parameter('class_ids', [0])  # COCO 0 = person, 77 = teddy bear.
+        self.declare_parameter('conf', 0.25)
+        self.declare_parameter('imgsz', 640)
+        self.declare_parameter('fps_limit', 0.0)  # 0.0 disables the limit.
+        self.declare_parameter('gstreamer_pipeline', DEFAULT_PIPELINE)
 
-        # Hent parametere
-        model_path = self.get_parameter("model_path").value
-        self.class_ids = set(self.get_parameter("class_ids").value)
-        self.conf = float(self.get_parameter("conf").value)
-        self.imgsz = int(self.get_parameter("imgsz").value)
-        self.fps_limit = float(self.get_parameter("fps_limit").value)
-        self.pipeline = self.get_parameter("gstreamer_pipeline").value
+        model_path = str(self.get_parameter('model_path').value)
+        self._class_ids = list(self.get_parameter('class_ids').value)
+        self._conf = float(self.get_parameter('conf').value)
+        self._imgsz = int(self.get_parameter('imgsz').value)
+        self._pipeline = str(self.get_parameter('gstreamer_pipeline').value)
+        self._fps_limiter = FpsLimiter(float(self.get_parameter('fps_limit').value))
 
-        # NCNN Eksport-logikk
-        if model_path.endswith('.pt'):
-            ncnn_model_dir = model_path.replace('.pt', '_ncnn_model')
-            if not os.path.exists(ncnn_model_dir):
-                self.get_logger().info(f"Eksporterer {model_path} til NCNN...")
-                temp_model = YOLO(model_path, task="detect")
-                temp_model.export(format="ncnn")
-                self.get_logger().info(f"Eksport ferdig! Lagret i {ncnn_model_dir}")
-            model_path = ncnn_model_dir
+        # --- Model ---
+        model_path = ensure_ncnn(model_path, self.get_logger())
+        self.get_logger().info(f'Loading YOLO model from: {model_path}')
+        self._model = YOLO(model_path, task='detect')
+        self._fps = FpsTracker(time.monotonic())
 
-        self.get_logger().info(f"Laster modell fra: {model_path}")
-        self.model = YOLO(model_path, task="detect")
-        self.bridge = CvBridge()
-        
-        # Vi publiserer fremdeles debug-bildet til ROS hvis ønskelig
-        self.pub = self.create_publisher(Image, "/yolo_coco/debug_image", 10)
+        # --- ROS interface ---
+        self._bridge = CvBridge()
+        self._image_pub = self.create_publisher(Image, OUTPUT_TOPIC, 10)
 
-        self.frames_processed = 0
-        self.current_fps = 0.0
-        self.fps_calc_time = time.time()
+        # --- Worker thread ---
+        # GStreamer + cv2.VideoCapture must not block the ROS executor; run it in a worker thread.
+        self._running = True
+        self._worker_thread = threading.Thread(target=self._camera_loop, daemon=True)
+        self._worker_thread.start()
 
-        # Start en dedikert tråd for å lese fra kameraet (forhindrer at ROS henger seg)
-        self.running = True
-        self.worker_thread = threading.Thread(target=self.camera_loop, daemon=True)
-        self.worker_thread.start()
-
-    def camera_loop(self):
-        self.get_logger().info(f"Åpner GStreamer-pipeline: {self.pipeline}")
-        cap = cv2.VideoCapture(self.pipeline, cv2.CAP_GSTREAMER)
-
+    def _camera_loop(self):
+        self.get_logger().info(f'Opening GStreamer pipeline: {self._pipeline}')
+        cap = cv2.VideoCapture(self._pipeline, cv2.CAP_GSTREAMER)
         if not cap.isOpened():
-            self.get_logger().error("Klarte ikke å åpne GStreamer videostrøm!")
+            self.get_logger().error('Failed to open GStreamer video stream')
             return
 
-        last_frame_time = time.time()
-
-        while self.running and rclpy.ok():
-            ret, frame = cap.read()
-            if not ret:
-                self.get_logger().warn("Mistet bilde fra videostrøm! Prøver igjen...")
-                time.sleep(0.1)
-                continue
-
-            now = time.time()
-            
-            # FPS capping
-            if self.fps_limit > 0.0:
-                if (now - last_frame_time) < (1.0 / self.fps_limit):
+        try:
+            while self._running and rclpy.ok():
+                ret, frame = cap.read()
+                if not ret:
+                    self.get_logger().warning('Lost frame from video stream, retrying...')
+                    time.sleep(0.1)
                     continue
-            last_frame_time = now
 
-            # Kjør modell
-            results = self.model(frame, imgsz=self.imgsz, conf=self.conf, classes=list(self.class_ids), verbose=False)
+                if self._image_pub.get_subscription_count() == 0:
+                    continue
 
-            if len(results) > 0:
-                annotated_frame = results[0].plot()
-            else:
-                annotated_frame = frame
+                now_s = time.monotonic()
+                if self._fps_limiter.should_skip(now_s):
+                    continue
 
-            # Regn ut FPS
-            self.frames_processed += 1
-            if (now - self.fps_calc_time) >= 1.0:
-                self.current_fps = self.frames_processed / (now - self.fps_calc_time)
-                self.frames_processed = 0
-                self.fps_calc_time = now
+                results = self._model(frame, imgsz=self._imgsz, conf=self._conf,
+                                      classes=self._class_ids, verbose=False)
+                annotated = results[0].plot()
 
-            cv2.putText(annotated_frame, f"FPS: {self.current_fps:.1f}", (10, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                self._fps.update(now_s)
+                draw_fps_overlay(annotated, self._fps.current_fps)
 
-            # Publiser for debug
-            out = self.bridge.cv2_to_imgmsg(annotated_frame, encoding="bgr8")
-            out.header.stamp = self.get_clock().now().to_msg()
-            self.pub.publish(out)
-
-        cap.release()
+                msg = self._bridge.cv2_to_imgmsg(annotated, encoding=ENCODING)
+                msg.header.stamp = self.get_clock().now().to_msg()
+                self._image_pub.publish(msg)
+        finally:
+            cap.release()
 
     def destroy_node(self):
-        self.running = False
-        if self.worker_thread.is_alive():
-            self.worker_thread.join(timeout=1.0)
+        self._running = False
+        if self._worker_thread.is_alive():
+            self._worker_thread.join(timeout=1.0)
         super().destroy_node()
+
 
 def main():
     rclpy.init()
     node = YoloGstreamerNode()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
