@@ -8,13 +8,13 @@ state estimator and tuning apply both modes.
 Usage
 -----
 Terminal A — bring up sim (or real robot):
-    ros2 launch ros_gz_bringup 3dMapping.launch.py
+    ros2 launch gregor_bringup 3dMapping.launch.py
 
 Terminal B — run live SLAM:
-    ros2 launch ros_gz_bringup mola_lo.launch.py
+    ros2 launch gregor_bringup mola_lo.launch.py
 
 Override topics if needed:
-    ros2 launch ros_gz_bringup mola_lo.launch.py \\
+    ros2 launch gregor_bringup mola_lo.launch.py \\
         lidar_topic:=/lidar3d/points odom_topic:=/odometry/filtered
 
 Notes
@@ -84,7 +84,7 @@ def generate_launch_description():
     # Reuse our local state-estimator YAMLs (same defaults as the offline
     # mola-map.sh script). The upstream system YAML expects an env var.
     repo_scripts = os.path.normpath(os.path.join(
-        get_package_share_directory('ros_gz_bringup'),
+        get_package_share_directory('gregor_bringup'),
         '..', '..', '..', '..', 'scripts'))
     simple_yaml = os.path.join(repo_scripts, 'state-estimation-simple.yaml')
     smoother_yaml = os.path.join(repo_scripts, 'state-estimation-smoother.yaml')

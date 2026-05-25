@@ -18,7 +18,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    pkg_bringup = get_package_share_directory('ros_gz_bringup')
+    pkg_bringup = get_package_share_directory('gregor_bringup')
     pkg_gregor_description = get_package_share_directory('gregor_description')
     pkg_slam_toolbox = get_package_share_directory('slam_toolbox')
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')

@@ -7,7 +7,7 @@ Switch modes by editing config/IRL/3d_mapping.yaml:
 All other node parameters live in that same config file.
 
 Usage:
-    ros2 launch ros_gz_bringup 3dMapping.launch.py
+    ros2 launch gregor_bringup 3dMapping.launch.py
 """
 
 # --- Imports ---
@@ -53,7 +53,7 @@ COMMON_BAG_TOPICS = [
 
 def generate_launch_description():
     pkg_description = get_package_share_directory('gregor_description')
-    pkg_bringup     = get_package_share_directory('ros_gz_bringup')
+    pkg_bringup     = get_package_share_directory('gregor_bringup')
 
     # --- Launch arguments ---
     enable_mola_arg = DeclareLaunchArgument(
