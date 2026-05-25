@@ -1,4 +1,4 @@
-// ESP32-C3 / ESP32 potentiometer reader
+// ESP32-C3 potentiometer reader. See wiki: Hardware-Firmware-Encoder.
 // - 11 dB attenuation, calibrated mV reads
 // - Trimmed-mean + EMA filter
 // - Binary framed packets @ fixed rate, CRC8 + sequence number

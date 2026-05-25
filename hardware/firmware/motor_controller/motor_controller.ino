@@ -1,10 +1,10 @@
 /*
- * ESP32 Motor Controller
+ * ESP32 Motor Controller. See wiki: Hardware-Firmware-MotorController.
  *
  * Single-loop architecture.
  * ISRs write volatile period data; loop() reads, filters, and dispatches.
  *
- * Protocol (8 bytes, unchanged from v1). See wiki: Allocator/Protocol.
+ * Protocol (8 bytes). See wiki: Allocator/Protocol.
  *   Command:  [START=0x55][CMD][M1_SPD][M2_SPD][M3_SPD][M4_SPD][DIRS][CRC8]
  *   Response: [START=0x55][STATUS][M1_RPM][M2_RPM][M3_RPM][M4_RPM][VBATT][CRC8]
  *
